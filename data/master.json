@@ -1,0 +1,685 @@
+{
+ "as_of": "2026-11-21",
+ "note": "All companies, people, bank details, and tax IDs are fictional.",
+ "buyer_entities": {
+  "MRPL": {
+   "name": "Meridian Retail Private Limited",
+   "gstin": "27ZZZCM0002Z1ZC",
+   "address": "Andheri East, Mumbai, Maharashtra 400069"
+  },
+  "MLPL": {
+   "name": "Meridian Logistics Private Limited",
+   "gstin": "27ZZZCM0003Z1ZB",
+   "address": "Bhiwandi, Thane, Maharashtra 421302"
+  }
+ },
+ "our_entity": "MRPL",
+ "vendors": {
+  "V001": {
+   "name": "Kestrel Packaging Private Limited",
+   "gstin": "27ZZZCK0001Z1ZF",
+   "state": "27",
+   "state_name": "Maharashtra",
+   "address": "Plot 14, MIDC Bhosari, Pune, Maharashtra 411026",
+   "email_domain": "kestrelpack.example",
+   "bank_account": "502000123456",
+   "ifsc": "EXMP0001234",
+   "aato_crore": 18,
+   "layout": "classic",
+   "tds": null,
+   "status": "approved"
+  },
+  "V002": {
+   "name": "Tarun Office Supplies",
+   "gstin": "27ZZZPT0004Z1ZC",
+   "state": "27",
+   "state_name": "Maharashtra",
+   "address": "Shop 7, Fort, Mumbai, Maharashtra 400001",
+   "email_domain": "tarunoffice.example",
+   "bank_account": "301100456780",
+   "ifsc": "EXMP0000456",
+   "aato_crore": 2.4,
+   "layout": "boxed",
+   "tds": null,
+   "status": "approved"
+  },
+  "V003": {
+   "name": "Harbour Electricals Private Limited",
+   "gstin": "24ZZZCH0005Z1ZK",
+   "state": "24",
+   "state_name": "Gujarat",
+   "address": "GIDC Vatva, Ahmedabad, Gujarat 382445",
+   "email_domain": "harbourelectric.example",
+   "bank_account": "410088776655",
+   "ifsc": "EXMP0002210",
+   "aato_crore": 9,
+   "layout": "modern",
+   "tds": null,
+   "status": "approved"
+  },
+  "V004": {
+   "name": "Lumen Facility Services Private Limited",
+   "gstin": "27ZZZCL0006Z1Z9",
+   "state": "27",
+   "state_name": "Maharashtra",
+   "address": "Hiranandani, Powai, Mumbai, Maharashtra 400076",
+   "email_domain": "lumenfacility.example",
+   "bank_account": "620044332211",
+   "ifsc": "EXMP0003317",
+   "aato_crore": 12,
+   "layout": "boxed",
+   "tds": "nil_certificate",
+   "status": "approved"
+  },
+  "V005": {
+   "name": "Arcline Consulting LLP",
+   "gstin": "29ZZZFA0007Z1Z9",
+   "state": "29",
+   "state_name": "Karnataka",
+   "address": "Indiranagar, Bengaluru, Karnataka 560038",
+   "email_domain": "arclineconsulting.example",
+   "bank_account": "730055667788",
+   "ifsc": "EXMP0004421",
+   "aato_crore": 6.5,
+   "layout": "modern",
+   "tds": "professional",
+   "status": "approved"
+  },
+  "V006": {
+   "name": "Sable Traders",
+   "gstin": "27ZZZPS0008Z1Z9",
+   "state": "27",
+   "state_name": "Maharashtra",
+   "address": "Kalyan Road, Bhiwandi, Maharashtra 421302",
+   "email_domain": "sabletraders.example",
+   "bank_account": "840066554433",
+   "ifsc": "EXMP0005532",
+   "aato_crore": 1.8,
+   "layout": "classic",
+   "tds": null,
+   "status": "approved"
+  },
+  "V007": {
+   "name": "Orbit Stationers",
+   "gstin": "27ZZZPO0009Z1ZC",
+   "state": "27",
+   "state_name": "Maharashtra",
+   "address": "Dadar West, Mumbai, Maharashtra 400028",
+   "email_domain": "orbitstationers.example",
+   "bank_account": "950077889900",
+   "ifsc": "EXMP0006643",
+   "aato_crore": 1.2,
+   "layout": "boxed",
+   "tds": null,
+   "status": "approved"
+  },
+  "V008": {
+   "name": "Bluepeak Software Inc",
+   "gstin": null,
+   "state": "96",
+   "state_name": "United States",
+   "address": "410 Market Street, Austin, TX 78701, USA",
+   "email_domain": "bluepeaksoftware.example",
+   "bank_account": "US00112233",
+   "ifsc": "SWIFT EXMPUS33",
+   "aato_crore": 0,
+   "layout": "modern",
+   "tds": null,
+   "status": "approved"
+  }
+ },
+ "employees": [
+  {
+   "id": "E014",
+   "department": "Procurement",
+   "bank_account": "950077889900"
+  }
+ ],
+ "gst_registry": {
+  "27ZZZCK0001Z1ZF": {
+   "status": "active",
+   "effective": null
+  },
+  "27ZZZPT0004Z1ZC": {
+   "status": "active",
+   "effective": null
+  },
+  "24ZZZCH0005Z1ZK": {
+   "status": "active",
+   "effective": null
+  },
+  "27ZZZCL0006Z1Z9": {
+   "status": "active",
+   "effective": null
+  },
+  "29ZZZFA0007Z1Z9": {
+   "status": "active",
+   "effective": null
+  },
+  "27ZZZPS0008Z1Z9": {
+   "status": "cancelled",
+   "effective": "2026-09-30"
+  },
+  "27ZZZPO0009Z1ZC": {
+   "status": "active",
+   "effective": null
+  }
+ },
+ "purchase_orders": {
+  "PO-2026-00418": {
+   "po": "PO-2026-00418",
+   "vendor": "V001",
+   "date": "2026-10-28",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "418-1",
+     "description": "Corrugated Boxes 5-Ply 18x12x10",
+     "hsn": "48191010",
+     "qty": 1200,
+     "unit": "Nos",
+     "rate": 42.5
+    },
+    {
+     "sku": "418-2",
+     "description": "Stretch Film 23 Micron",
+     "hsn": "39201019",
+     "qty": 180,
+     "unit": "Kg",
+     "rate": 165.0
+    },
+    {
+     "sku": "418-3",
+     "description": "BOPP Packing Tape 48mm",
+     "hsn": "39191000",
+     "qty": 600,
+     "unit": "Nos",
+     "rate": 38.75
+    }
+   ]
+  },
+  "PO-2026-00422": {
+   "po": "PO-2026-00422",
+   "vendor": "V002",
+   "date": "2026-10-20",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "422-1",
+     "description": "Ergonomic Office Chair",
+     "hsn": "9401",
+     "qty": 7,
+     "unit": "Nos",
+     "rate": 1428.57
+    }
+   ]
+  },
+  "PO-2026-00423": {
+   "po": "PO-2026-00423",
+   "vendor": "V001",
+   "date": "2026-10-29",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "423-1",
+     "description": "Kraft Paper Roll 120 GSM",
+     "hsn": "48043100",
+     "qty": 50,
+     "unit": "Nos",
+     "rate": 900.0
+    }
+   ]
+  },
+  "PO-2026-00424": {
+   "po": "PO-2026-00424",
+   "vendor": "V003",
+   "date": "2026-10-21",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "424-1",
+     "description": "Copper Cable 4 sq mm",
+     "hsn": "85444999",
+     "qty": 20,
+     "unit": "Coil",
+     "rate": 3250.0
+    }
+   ]
+  },
+  "PO-2026-00430": {
+   "po": "PO-2026-00430",
+   "vendor": "V004",
+   "date": "2026-04-01",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "430-1",
+     "description": "Housekeeping and Facility Services",
+     "hsn": "998533",
+     "qty": 12,
+     "unit": "Month",
+     "rate": 62000.0
+    }
+   ]
+  },
+  "PO-2026-00431": {
+   "po": "PO-2026-00431",
+   "vendor": "V005",
+   "date": "2026-10-05",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "431-1",
+     "description": "Process Advisory Services",
+     "hsn": "998311",
+     "qty": 1,
+     "unit": "Lot",
+     "rate": 100000.0
+    }
+   ]
+  },
+  "PO-2026-00440": {
+   "po": "PO-2026-00440",
+   "vendor": "V006",
+   "date": "2026-10-15",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "440-1",
+     "description": "Polyester Strapping Roll",
+     "hsn": "3920",
+     "qty": 100,
+     "unit": "Kg",
+     "rate": 200.0
+    }
+   ]
+  },
+  "PO-2026-00471": {
+   "po": "PO-2026-00471",
+   "vendor": "V007",
+   "date": "2026-10-25",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "471-1",
+     "description": "Stationery Kit",
+     "hsn": "4820",
+     "qty": 100,
+     "unit": "Nos",
+     "rate": 150.0
+    }
+   ]
+  },
+  "PO-2026-00480": {
+   "po": "PO-2026-00480",
+   "vendor": "V008",
+   "date": "2026-10-02",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "480-1",
+     "description": "Software Subscription",
+     "hsn": "997331",
+     "qty": 1,
+     "unit": "Lot",
+     "rate": 420000.0
+    }
+   ]
+  },
+  "PO-2026-00502": {
+   "po": "PO-2026-00502",
+   "vendor": "V001",
+   "date": "2026-11-01",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "502-1",
+     "description": "Corrugated Boxes Bulk",
+     "hsn": "48191010",
+     "qty": 30000,
+     "unit": "Nos",
+     "rate": 40.0
+    }
+   ]
+  },
+  "PO-2026-00510": {
+   "po": "PO-2026-00510",
+   "vendor": "V001",
+   "date": "2026-10-30",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "510-1",
+     "description": "Foam Inserts",
+     "hsn": "39211390",
+     "qty": 1000,
+     "unit": "Nos",
+     "rate": 100.0
+    }
+   ]
+  },
+  "PO-2026-00520": {
+   "po": "PO-2026-00520",
+   "vendor": "V001",
+   "date": "2026-10-30",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "520-1",
+     "description": "Industrial Strapping Coil",
+     "hsn": "39206919",
+     "qty": 100,
+     "unit": "Nos",
+     "rate": 1000.0
+    }
+   ]
+  },
+  "PO-2026-00530": {
+   "po": "PO-2026-00530",
+   "vendor": "V001",
+   "date": "2026-10-30",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "530-1",
+     "description": "Pallet Corner Guards",
+     "hsn": "48239090",
+     "qty": 100,
+     "unit": "Nos",
+     "rate": 1000.0
+    },
+    {
+     "sku": "530-2",
+     "description": "Paper Void Fill",
+     "hsn": "48239019",
+     "qty": 200,
+     "unit": "Nos",
+     "rate": 500.0
+    }
+   ]
+  },
+  "PO-2026-00540": {
+   "po": "PO-2026-00540",
+   "vendor": "V001",
+   "date": "2026-10-30",
+   "status": "open",
+   "valid_until": "2027-03-31",
+   "currency": "INR",
+   "gst_rate": 18,
+   "lines": [
+    {
+     "sku": "540-1",
+     "description": "Custom Printed Cartons",
+     "hsn": "48191090",
+     "qty": 100,
+     "unit": "Nos",
+     "rate": 1000.0
+    }
+   ]
+  }
+ },
+ "receipts": [
+  {
+   "grn": "GRN-00418",
+   "po": "PO-2026-00418",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "418-1",
+     "received": 1200,
+     "accepted": 1200
+    },
+    {
+     "sku": "418-2",
+     "received": 180,
+     "accepted": 180
+    },
+    {
+     "sku": "418-3",
+     "received": 600,
+     "accepted": 600
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00422",
+   "po": "PO-2026-00422",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "422-1",
+     "received": 7,
+     "accepted": 7
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00423",
+   "po": "PO-2026-00423",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "423-1",
+     "received": 50,
+     "accepted": 50
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00424",
+   "po": "PO-2026-00424",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "424-1",
+     "received": 20,
+     "accepted": 20
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00430",
+   "po": "PO-2026-00430",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "430-1",
+     "received": 12,
+     "accepted": 12
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00431",
+   "po": "PO-2026-00431",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "431-1",
+     "received": 1,
+     "accepted": 1
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00440",
+   "po": "PO-2026-00440",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "440-1",
+     "received": 100,
+     "accepted": 100
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00471",
+   "po": "PO-2026-00471",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "471-1",
+     "received": 100,
+     "accepted": 100
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00480",
+   "po": "PO-2026-00480",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "480-1",
+     "received": 1,
+     "accepted": 1
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00502",
+   "po": "PO-2026-00502",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "502-1",
+     "received": 30000,
+     "accepted": 30000
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00510",
+   "po": "PO-2026-00510",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "510-1",
+     "received": 1000,
+     "accepted": 1000
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00520",
+   "po": "PO-2026-00520",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "520-1",
+     "received": 100,
+     "accepted": 100
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00530",
+   "po": "PO-2026-00530",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "530-1",
+     "received": 100,
+     "accepted": 100
+    },
+    {
+     "sku": "530-2",
+     "received": 200,
+     "accepted": 200
+    }
+   ]
+  },
+  {
+   "grn": "GRN-00540",
+   "po": "PO-2026-00540",
+   "date": "2026-11-12",
+   "lines": [
+    {
+     "sku": "540-1",
+     "received": 100,
+     "accepted": 100
+    }
+   ]
+  }
+ ],
+ "history": [],
+ "bank_changes": [],
+ "credits": [],
+ "advances": [],
+ "policy": {
+  "price_tolerance_pct": 1.0,
+  "rounding_tolerance_inr": 1.0,
+  "max_invoice_age_days": 180,
+  "split_window_days": 7,
+  "approval_limits": [
+   {
+    "up_to_inr": 500000,
+    "role": "AP Manager"
+   },
+   {
+    "up_to_inr": 2000000,
+    "role": "Finance Controller"
+   },
+   {
+    "up_to_inr": null,
+    "role": "CFO"
+   }
+  ],
+  "e_invoice_threshold_crore": 5,
+  "invoice_number_max_length": 16,
+  "hsn_min_digits": {
+   "up_to_5_crore": 4,
+   "above_5_crore": 6
+  },
+  "tds": {
+   "professional": {
+    "rate_pct": 10,
+    "threshold_inr": 50000
+   },
+   "technical": {
+    "rate_pct": 2,
+    "threshold_inr": 50000
+   }
+  }
+ }
+}

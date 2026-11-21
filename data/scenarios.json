@@ -1,0 +1,5163 @@
+[
+ {
+  "id": "H01",
+  "title": "Clean invoice",
+  "group": "happy",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "clean",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B01",
+  "title": "Bank-detail fraud",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "918273645501",
+       "ifsc": "EXMP0009988",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "BLOCKED",
+       "reason": "bank_mismatch",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B02",
+  "title": "Disguised duplicate",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "history": [
+      {
+       "invoice_number": "KP/26-27/1042",
+       "vendor": "V001",
+       "date": "2026-11-14",
+       "total": 122661.0,
+       "status": "paid",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "service_period": null,
+       "lines": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "rate": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "rate": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "rate": 38.75
+        }
+       ]
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B02.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042-A",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "50c5b49adef4bb737994145289903f7485d26766e386e4cc667f89140a04c75e",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "duplicate_suspected",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B03",
+  "title": "Lookalike vendor",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B03.pdf",
+      "sender": "billing@kestrel-pack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Pvt Ltd",
+       "vendor_gstin": "27ZZZCK0011Z1ZD",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "918273645502",
+       "ifsc": "EXMP0009988",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "584e4a5c8b9bd47f6defb5aa542bab39fe13f7d93c5d00e97286db1eca79e87c",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "BLOCKED",
+       "reason": "lookalike_vendor",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B04",
+  "title": "Shared bank account",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B04.pdf",
+      "sender": "billing@orbitstationers.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "OS/26-27/0218",
+       "invoice_date": "2026-11-12",
+       "po_numbers": [
+        "PO-2026-00471"
+       ],
+       "vendor_name": "Orbit Stationers",
+       "vendor_gstin": "27ZZZPO0009Z1ZC",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "950077889900",
+       "ifsc": "EXMP0006643",
+       "currency": "INR",
+       "taxable_value": 15000.0,
+       "cgst": 1350.0,
+       "sgst": 1350.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 17700.0,
+       "computed_total": 17700.0,
+       "amount_in_words": "Rupees Seventeen Thousand Seven Hundred Only",
+       "irn": null,
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Stationery Kit",
+         "hsn": "4820",
+         "quantity": 100,
+         "unit": "Nos",
+         "rate": 150.0,
+         "amount": 15000.0,
+         "rate_before_tax": 150.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "BLOCKED",
+       "reason": "shared_bank_account",
+       "payable": 0.0,
+       "held": 17700.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B05",
+  "title": "Approval-limit splitting",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "history": [
+      {
+       "invoice_number": "KP/26-27/1071",
+       "vendor": "V001",
+       "date": "2026-11-10",
+       "total": 472000.0,
+       "status": "approved",
+       "po_numbers": [
+        "PO-2026-00502"
+       ],
+       "service_period": null,
+       "lines": [
+        {
+         "description": "Corrugated Boxes Bulk",
+         "hsn": "48191010",
+         "quantity": 10000,
+         "rate": 40.0
+        }
+       ]
+      },
+      {
+       "invoice_number": "KP/26-27/1074",
+       "vendor": "V001",
+       "date": "2026-11-12",
+       "total": 472000.0,
+       "status": "approved",
+       "po_numbers": [
+        "PO-2026-00502"
+       ],
+       "service_period": null,
+       "lines": [
+        {
+         "description": "Corrugated Boxes Bulk",
+         "hsn": "48191010",
+         "quantity": 10000,
+         "rate": 40.0
+        }
+       ]
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B05.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1077",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00502"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 400000.0,
+       "cgst": 36000.0,
+       "sgst": 36000.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 472000.0,
+       "computed_total": 472000.0,
+       "amount_in_words": "Rupees Four Lakh Seventy Two Thousand Only",
+       "irn": "3da2eadd702ac1984608fca75edeeb2a44a531ca0096e4ad71589b0d122aa6d6",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes Bulk",
+         "hsn": "48191010",
+         "quantity": 10000,
+         "unit": "Nos",
+         "rate": 40.0,
+         "amount": 400000.0,
+         "rate_before_tax": 40.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "approval_split",
+       "payable": 0.0,
+       "held": 472000.0,
+       "deducted": 0.0,
+       "combined_total": 1416000.0,
+       "route_to": "Finance Controller"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B06",
+  "title": "Slow PO overrun",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "history": [
+      {
+       "invoice_number": "KP/26-27/1079",
+       "vendor": "V001",
+       "date": "2026-11-05",
+       "total": 40120.0,
+       "status": "paid",
+       "po_numbers": [
+        "PO-2026-00510"
+       ],
+       "service_period": null,
+       "lines": [
+        {
+         "description": "Foam Inserts",
+         "hsn": "39211390",
+         "quantity": 340,
+         "rate": 100.0
+        }
+       ]
+      },
+      {
+       "invoice_number": "KP/26-27/1081",
+       "vendor": "V001",
+       "date": "2026-11-10",
+       "total": 40120.0,
+       "status": "paid",
+       "po_numbers": [
+        "PO-2026-00510"
+       ],
+       "service_period": null,
+       "lines": [
+        {
+         "description": "Foam Inserts",
+         "hsn": "39211390",
+         "quantity": 340,
+         "rate": 100.0
+        }
+       ]
+      }
+     ],
+     "receipts": {
+      "PO-2026-00510": {
+       "510-1": [
+        1020,
+        1020
+       ]
+      }
+     }
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B06.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1083",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00510"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 34000.0,
+       "cgst": 3060.0,
+       "sgst": 3060.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 40120.0,
+       "computed_total": 40120.0,
+       "amount_in_words": "Rupees Forty Thousand One Hundred Twenty Only",
+       "irn": "63de8c11dbdd32c877f11613e4b83a971098c0b94faf0243ec4f8dc759e287b6",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Foam Inserts",
+         "hsn": "39211390",
+         "quantity": 340,
+         "unit": "Nos",
+         "rate": 100.0,
+         "amount": 34000.0,
+         "rate_before_tax": 100.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "po_overrun",
+       "payable": 0.0,
+       "held": 40120.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B07",
+  "title": "Billed but not delivered",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "receipts": {
+      "PO-2026-00520": {
+       "520-1": [
+        80,
+        80
+       ]
+      }
+     }
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B07.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1090",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00520"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 100000.0,
+       "cgst": 9000.0,
+       "sgst": 9000.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 118000.0,
+       "computed_total": 118000.0,
+       "amount_in_words": "Rupees One Lakh Eighteen Thousand Only",
+       "irn": "50ca8b6de9e11c6868fe21d66fc1bd9f729e5c07e69c10834088655559dfbb90",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Industrial Strapping Coil",
+         "hsn": "39206919",
+         "quantity": 100,
+         "unit": "Nos",
+         "rate": 1000.0,
+         "amount": 100000.0,
+         "rate_before_tax": 1000.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "PART_PAY",
+       "reason": "short_receipt",
+       "payable": 94400.0,
+       "held": 23600.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B08",
+  "title": "Failed quality check",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "receipts": {
+      "PO-2026-00520": {
+       "520-1": [
+        100,
+        85
+       ]
+      }
+     }
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B08.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1091",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00520"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 100000.0,
+       "cgst": 9000.0,
+       "sgst": 9000.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 118000.0,
+       "computed_total": 118000.0,
+       "amount_in_words": "Rupees One Lakh Eighteen Thousand Only",
+       "irn": "4d8b6b252971c4da0f03c724d6ba969b2c1dc74062fa9e9ce2468fdb0b1cc482",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Industrial Strapping Coil",
+         "hsn": "39206919",
+         "quantity": 100,
+         "unit": "Nos",
+         "rate": 1000.0,
+         "amount": 100000.0,
+         "rate_before_tax": 1000.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "PART_PAY",
+       "reason": "qc_rejection",
+       "payable": 100300.0,
+       "held": 17700.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B09",
+  "title": "Total matches, lines do not",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B09.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1095",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00530"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 200000.0,
+       "cgst": 18000.0,
+       "sgst": 18000.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 236000.0,
+       "computed_total": 236000.0,
+       "amount_in_words": "Rupees Two Lakh Thirty Six Thousand Only",
+       "irn": "d84c7772eae12cc06ab15b3eb4ffb7ad0531372a52389803b638885849a1a20e",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Pallet Corner Guards",
+         "hsn": "48239090",
+         "quantity": 100,
+         "unit": "Nos",
+         "rate": 1100.0,
+         "amount": 110000.0,
+         "rate_before_tax": 1100.0
+        },
+        {
+         "description": "Paper Void Fill",
+         "hsn": "48239019",
+         "quantity": 180,
+         "unit": "Nos",
+         "rate": 500.0,
+         "amount": 90000.0,
+         "rate_before_tax": 500.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "line_mismatch",
+       "payable": 0.0,
+       "held": 236000.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B10",
+  "title": "Advance not adjusted",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "advances": [
+      {
+       "po": "PO-2026-00540",
+       "amount": 35400.0,
+       "ref": "ADV-2026-0031"
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B10.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1098",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00540"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 100000.0,
+       "cgst": 9000.0,
+       "sgst": 9000.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 118000.0,
+       "computed_total": 118000.0,
+       "amount_in_words": "Rupees One Lakh Eighteen Thousand Only",
+       "irn": "efecf824c5495979be1e6c1d7fd0ab2b036b6a9ff118fef826c1942e3fc7e0bd",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Custom Printed Cartons",
+         "hsn": "48191090",
+         "quantity": 100,
+         "unit": "Nos",
+         "rate": 1000.0,
+         "amount": 100000.0,
+         "rate_before_tax": 1000.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "PART_PAY",
+       "reason": "advance_adjusted",
+       "payable": 82600.0,
+       "held": 0.0,
+       "deducted": 35400.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B11",
+  "title": "Open credit ignored",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "credits": [
+      {
+       "vendor": "V001",
+       "amount": 50000.0,
+       "ref": "CN/26-27/0071"
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B11.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "PART_PAY",
+       "reason": "credit_applied",
+       "payable": 72661.0,
+       "held": 0.0,
+       "deducted": 50000.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B12",
+  "title": "Overlapping service period",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "history": [
+      {
+       "invoice_number": "LF/26-27/0288",
+       "vendor": "V004",
+       "date": "2026-11-01",
+       "total": 73160.0,
+       "status": "paid",
+       "po_numbers": [
+        "PO-2026-00430"
+       ],
+       "service_period": [
+        "2026-10-01",
+        "2026-10-31"
+       ],
+       "lines": [
+        {
+         "description": "Housekeeping and Facility Services",
+         "hsn": "998533",
+         "quantity": 1,
+         "rate": 62000.0
+        }
+       ]
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B12.pdf",
+      "sender": "billing@lumenfacility.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "LF/26-27/0312",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00430"
+       ],
+       "vendor_name": "Lumen Facility Services Private Limited",
+       "vendor_gstin": "27ZZZCL0006Z1Z9",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "620044332211",
+       "ifsc": "EXMP0003317",
+       "currency": "INR",
+       "taxable_value": 62000.0,
+       "cgst": 5580.0,
+       "sgst": 5580.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 73160.0,
+       "computed_total": 73160.0,
+       "amount_in_words": "Rupees Seventy Three Thousand One Hundred Sixty Only",
+       "irn": "3465b7806696054ff8720d174a1fc0f2adb54f08ade54704dc9dc215d2670ab3",
+       "service_period": [
+        "2026-10-15",
+        "2026-11-14"
+       ],
+       "line_items": [
+        {
+         "description": "Housekeeping and Facility Services",
+         "hsn": "998533",
+         "quantity": 1,
+         "unit": "Month",
+         "rate": 62000.0,
+         "amount": 62000.0,
+         "rate_before_tax": 62000.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "PART_PAY",
+       "reason": "service_overlap",
+       "payable": 33040.0,
+       "held": 40120.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B13",
+  "title": "Wrong GST type",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B13.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1101",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 0.0,
+       "sgst": 0.0,
+       "igst": 18711.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "529e5f59cfa21df3e6c57853ac061b9bc5baa1e459716fa06f52680238c8884f",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "wrong_gst_type",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B14",
+  "title": "Wrong company billed",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B14.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1102",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0003Z1ZB",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "ad5ac4aa578b6e57d9da7363ed351791faa4c1d0199169576cb29eb99fa7e068",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "wrong_buyer_entity",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B15",
+  "title": "Cancelled GST registration",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B15.pdf",
+      "sender": "billing@sabletraders.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "ST/26-27/0077",
+       "invoice_date": "2026-11-10",
+       "po_numbers": [
+        "PO-2026-00440"
+       ],
+       "vendor_name": "Sable Traders",
+       "vendor_gstin": "27ZZZPS0008Z1Z9",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "840066554433",
+       "ifsc": "EXMP0005532",
+       "currency": "INR",
+       "taxable_value": 20000.0,
+       "cgst": 1800.0,
+       "sgst": 1800.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 23600.0,
+       "computed_total": 23600.0,
+       "amount_in_words": "Rupees Twenty Three Thousand Six Hundred Only",
+       "irn": null,
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Polyester Strapping Roll",
+         "hsn": "3920",
+         "quantity": 100,
+         "unit": "Kg",
+         "rate": 200.0,
+         "amount": 20000.0,
+         "rate_before_tax": 200.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "gst_cancelled",
+       "payable": 0.0,
+       "held": 23600.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B16",
+  "title": "TDS not considered",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B16.pdf",
+      "sender": "billing@arclineconsulting.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "AC/26-27/0145",
+       "invoice_date": "2026-11-09",
+       "po_numbers": [
+        "PO-2026-00431"
+       ],
+       "vendor_name": "Arcline Consulting LLP",
+       "vendor_gstin": "29ZZZFA0007Z1Z9",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "730055667788",
+       "ifsc": "EXMP0004421",
+       "currency": "INR",
+       "taxable_value": 100000.0,
+       "cgst": 0.0,
+       "sgst": 0.0,
+       "igst": 18000.0,
+       "round_off": 0.0,
+       "total": 118000.0,
+       "computed_total": 118000.0,
+       "amount_in_words": "Rupees One Lakh Eighteen Thousand Only",
+       "irn": "8c9109a122d8fda3d7893c19d7aac38ffc55b44e11141b18fbc95a3900e04376",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Process Advisory Services",
+         "hsn": "998311",
+         "quantity": 1,
+         "unit": "Lot",
+         "rate": 100000.0,
+         "amount": 100000.0,
+         "rate_before_tax": 100000.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "tds_deducted",
+       "payable": 108000.0,
+       "held": 0.0,
+       "deducted": 10000.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B17",
+  "title": "Recurring invoice",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "history": [
+      {
+       "invoice_number": "LF/26-27/0266",
+       "vendor": "V004",
+       "date": "2026-10-02",
+       "total": 73160.0,
+       "status": "paid",
+       "po_numbers": [
+        "PO-2026-00430"
+       ],
+       "service_period": [
+        "2026-09-01",
+        "2026-09-30"
+       ],
+       "lines": [
+        {
+         "description": "Housekeeping and Facility Services",
+         "hsn": "998533",
+         "quantity": 1,
+         "rate": 62000.0
+        }
+       ]
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B17.pdf",
+      "sender": "billing@lumenfacility.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "LF/26-27/0288",
+       "invoice_date": "2026-11-02",
+       "po_numbers": [
+        "PO-2026-00430"
+       ],
+       "vendor_name": "Lumen Facility Services Private Limited",
+       "vendor_gstin": "27ZZZCL0006Z1Z9",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "620044332211",
+       "ifsc": "EXMP0003317",
+       "currency": "INR",
+       "taxable_value": 62000.0,
+       "cgst": 5580.0,
+       "sgst": 5580.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 73160.0,
+       "computed_total": 73160.0,
+       "amount_in_words": "Rupees Seventy Three Thousand One Hundred Sixty Only",
+       "irn": "c40952b3835c562883494448561be60928606dc853e5b7a8a6707e8f84953267",
+       "service_period": [
+        "2026-10-01",
+        "2026-10-31"
+       ],
+       "line_items": [
+        {
+         "description": "Housekeeping and Facility Services",
+         "hsn": "998533",
+         "quantity": 1,
+         "unit": "Month",
+         "rate": 62000.0,
+         "amount": 62000.0,
+         "rate_before_tax": 62000.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "recurring_period",
+       "payable": 73160.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B18",
+  "title": "Verified bank change",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "bank_changes": [
+      {
+       "vendor": "V001",
+       "new_account": "918273645501",
+       "new_ifsc": "EXMP0009988",
+       "verified_by": "callback to known contact",
+       "verified_on": "2026-11-12",
+       "ref": "VBC-2026-0044"
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B18.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "918273645501",
+       "ifsc": "EXMP0009988",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "bank_change_verified",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B19",
+  "title": "Corrected invoice",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "history": [
+      {
+       "invoice_number": "KP/26-27/1042",
+       "vendor": "V001",
+       "date": "2026-11-14",
+       "total": 123661.0,
+       "status": "held",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "service_period": null,
+       "lines": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "rate": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "rate": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "rate": 38.75
+        }
+       ]
+      }
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B19.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "revision_supersedes",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0,
+       "supersedes": "KP/26-27/1042"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B20",
+  "title": "Invoice before goods",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {
+     "remove_receipts": [
+      "PO-2026-00418"
+     ]
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B20.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1110",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "66e8ad6fac3fdd7fb4db041dc6ead97f825bdb1d41cf327b01176b0ac839b6cf",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "awaiting_receipt",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     },
+     {
+      "file": "B20.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1110",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "66e8ad6fac3fdd7fb4db041dc6ead97f825bdb1d41cf327b01176b0ac839b6cf",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "clean",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      },
+      "action": "add_receipt_and_recheck",
+      "receipts": {
+       "PO-2026-00418": {
+        "418-1": [
+         1200,
+         1200
+        ],
+        "418-2": [
+         180,
+         180
+        ],
+        "418-3": [
+         600,
+         600
+        ]
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "B21",
+  "title": "Missing IRN above e-invoice threshold",
+  "group": "business",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "B21.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1112",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": null,
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "missing_irn",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T01",
+  "title": "Corrupt, empty, or fake PDF",
+  "group": "technical",
+  "cases": [
+   {
+    "name": "Cut-off file",
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T01a.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "RETURNED",
+       "reason": "unreadable_file",
+       "payable": 0.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   },
+   {
+    "name": "Empty file",
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T01b.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "RETURNED",
+       "reason": "unreadable_file",
+       "payable": 0.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   },
+   {
+    "name": "Text file renamed to PDF",
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T01c.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "RETURNED",
+       "reason": "unreadable_file",
+       "payable": 0.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T02",
+  "title": "Password-protected PDF",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T02.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "RETURNED",
+       "reason": "password_protected",
+       "payable": 0.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T03",
+  "title": "Exact same file twice",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "clean",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     },
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "BLOCKED",
+       "reason": "exact_duplicate",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T04",
+  "title": "Not an invoice",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T04.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "quotation",
+       "invoice_number": "QT/26-27/0207",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": null,
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "RETURNED",
+       "reason": "not_an_invoice",
+       "payable": 0.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T05",
+  "title": "Credit note",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T05.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "credit_note",
+       "invoice_number": "CN/26-27/0088",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 4250.0,
+       "cgst": 382.5,
+       "sgst": 382.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 5015.0,
+       "computed_total": 5015.0,
+       "amount_in_words": "Rupees Five Thousand Fifteen Only",
+       "irn": "906c989ecdd4eb8f046e5a11b6ac69b994571f05c5d490722d655acdcd40eb56",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 100,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 4250.0,
+         "rate_before_tax": 42.5
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "RETURNED",
+       "reason": "credit_note_recorded",
+       "payable": 0.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T06",
+  "title": "Two invoices in one PDF",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T06.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": [
+       {
+        "document_type": "tax_invoice",
+        "invoice_number": "KP/26-27/1042",
+        "invoice_date": "2026-11-14",
+        "po_numbers": [
+         "PO-2026-00418"
+        ],
+        "vendor_name": "Kestrel Packaging Private Limited",
+        "vendor_gstin": "27ZZZCK0001Z1ZF",
+        "buyer_gstin": "27ZZZCM0002Z1ZC",
+        "bank_account": "502000123456",
+        "ifsc": "EXMP0001234",
+        "currency": "INR",
+        "taxable_value": 103950.0,
+        "cgst": 9355.5,
+        "sgst": 9355.5,
+        "igst": 0.0,
+        "round_off": 0.0,
+        "total": 122661.0,
+        "computed_total": 122661.0,
+        "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+        "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+        "service_period": null,
+        "line_items": [
+         {
+          "description": "Corrugated Boxes 5-Ply 18x12x10",
+          "hsn": "48191010",
+          "quantity": 1200,
+          "unit": "Nos",
+          "rate": 42.5,
+          "amount": 51000.0,
+          "rate_before_tax": 42.5
+         },
+         {
+          "description": "Stretch Film 23 Micron",
+          "hsn": "39201019",
+          "quantity": 180,
+          "unit": "Kg",
+          "rate": 165.0,
+          "amount": 29700.0,
+          "rate_before_tax": 165.0
+         },
+         {
+          "description": "BOPP Packing Tape 48mm",
+          "hsn": "39191000",
+          "quantity": 600,
+          "unit": "Nos",
+          "rate": 38.75,
+          "amount": 23250.0,
+          "rate_before_tax": 38.75
+         }
+        ],
+        "extra_charges": [],
+        "tax_inclusive": false
+       },
+       {
+        "document_type": "tax_invoice",
+        "invoice_number": "HE/2627/0419",
+        "invoice_date": "2026-11-13",
+        "po_numbers": [
+         "PO-2026-00424"
+        ],
+        "vendor_name": "Harbour Electricals Private Limited",
+        "vendor_gstin": "24ZZZCH0005Z1ZK",
+        "buyer_gstin": "27ZZZCM0002Z1ZC",
+        "bank_account": "410088776655",
+        "ifsc": "EXMP0002210",
+        "currency": "INR",
+        "taxable_value": 65000.0,
+        "cgst": 0.0,
+        "sgst": 0.0,
+        "igst": 11700.0,
+        "round_off": 0.0,
+        "total": 76700.0,
+        "computed_total": 76700.0,
+        "amount_in_words": "Rupees Seventy Six Thousand Seven Hundred Only",
+        "irn": "848b8000fbcedadd81febd528d8e966ff4681a7a1dd242f5a123942d1dbf5abe",
+        "service_period": null,
+        "line_items": [
+         {
+          "description": "Copper Cable 4 sq mm",
+          "hsn": "85444999",
+          "quantity": 20,
+          "unit": "Coil",
+          "rate": 3250.0,
+          "amount": 65000.0,
+          "rate_before_tax": 3250.0
+         }
+        ],
+        "extra_charges": [],
+        "tax_inclusive": false
+       }
+      ],
+      "expect": [
+       {
+        "outcome": "APPROVED",
+        "reason": "clean",
+        "payable": 122661.0,
+        "held": 0.0,
+        "deducted": 0.0
+       },
+       {
+        "outcome": "APPROVED",
+        "reason": "clean",
+        "payable": 76700.0,
+        "held": 0.0,
+        "deducted": 0.0
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T07",
+  "title": "Rotated and skewed scan",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T07.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "clean",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T08",
+  "title": "Blurry low-resolution fax",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T08.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "low_confidence",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T09",
+  "title": "Stamp over a key figure",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T09.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "obscured_field",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T10",
+  "title": "Hidden text differs from visible",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T10.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "BLOCKED",
+       "reason": "text_layer_mismatch",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T11",
+  "title": "No invoice number",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T11.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": null,
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": null,
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "missing_invoice_number",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T12",
+  "title": "Missing or ambiguous date",
+  "group": "technical",
+  "cases": [
+   {
+    "name": "Date missing",
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T12a.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": null,
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "missing_date",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   },
+   {
+    "name": "03/11/2026 resolved as DD/MM",
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T12b.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-03",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "date_resolved",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T13",
+  "title": "Future-dated or very old invoice",
+  "group": "technical",
+  "cases": [
+   {
+    "name": "Future-dated",
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T13a.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-12-25",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "future_date",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   },
+   {
+    "name": "Very old",
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T13b.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2025-01-15",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "stale_date",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T14",
+  "title": "No total",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T14.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": null,
+       "computed_total": 122661.0,
+       "amount_in_words": null,
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "missing_total",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T15",
+  "title": "Totals do not add up",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T15.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 123661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Three Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "arithmetic_mismatch",
+       "payable": 0.0,
+       "held": 123661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T16",
+  "title": "Amount in words differs",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T16.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Thirty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "amount_words_conflict",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T17",
+  "title": "Indian number format and round-off",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T17.pdf",
+      "sender": "billing@tarunoffice.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "TOS/26-27/0456",
+       "invoice_date": "2026-11-11",
+       "po_numbers": [
+        "PO-2026-00422"
+       ],
+       "vendor_name": "Tarun Office Supplies",
+       "vendor_gstin": "27ZZZPT0004Z1ZC",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "301100456780",
+       "ifsc": "EXMP0000456",
+       "currency": "INR",
+       "taxable_value": 9999.99,
+       "cgst": 900.0,
+       "sgst": 900.0,
+       "igst": 0.0,
+       "round_off": 0.01,
+       "total": 11800.0,
+       "computed_total": 11800.0,
+       "amount_in_words": "Rupees Eleven Thousand Eight Hundred Only",
+       "irn": null,
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Ergonomic Office Chair",
+         "hsn": "9401",
+         "quantity": 7,
+         "unit": "Nos",
+         "rate": 1428.57,
+         "amount": 9999.99,
+         "rate_before_tax": 1428.57
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "rounding_accepted",
+       "payable": 11800.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T18",
+  "title": "Tax-inclusive rates",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T18.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 50.15,
+         "amount": 60180.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 194.7,
+         "amount": 35046.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 45.725,
+         "amount": 27435.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": true
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "tax_inclusive",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T19",
+  "title": "No PO number",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T19.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "po_missing",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0,
+       "suggested_po": "PO-2026-00418"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T20",
+  "title": "One invoice across two POs",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T20.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1120",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418",
+        "PO-2026-00423"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 148950.0,
+       "cgst": 13405.5,
+       "sgst": 13405.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 175761.0,
+       "computed_total": 175761.0,
+       "amount_in_words": "Rupees One Lakh Seventy Five Thousand Seven Hundred Sixty One Only",
+       "irn": "46fababa9a2fe4b1a0a21ab7c75076b85f22645a7c3cbc3b8105d82b2a343bd1",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        },
+        {
+         "description": "Kraft Paper Roll 120 GSM",
+         "hsn": "48043100",
+         "quantity": 50,
+         "unit": "Nos",
+         "rate": 900.0,
+         "amount": 45000.0,
+         "rate_before_tax": 900.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "multi_po",
+       "payable": 175761.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T21",
+  "title": "Bundled line item",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T21.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Packaging materials as per PO",
+         "hsn": "481910",
+         "quantity": 1,
+         "unit": "Lot",
+         "rate": 103950.0,
+         "amount": 103950.0,
+         "rate_before_tax": 103950.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "bundled_lines",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T22",
+  "title": "Vendor name spelled differently",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T22.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Pvt. Ltd.",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "vendor_alias",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T23",
+  "title": "Vendor not approved",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T23.pdf",
+      "sender": "billing@crestlinepack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Crestline Packaging Private Limited",
+       "vendor_gstin": "27ZZZCC0010Z1ZM",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "918273645503",
+       "ifsc": "EXMP0009977",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1b8173212e7528b1426dc463ec144970282d94cd9ab779e9131cee8984b3add5",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "BLOCKED",
+       "reason": "unknown_vendor",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T24",
+  "title": "Invalid or misread GSTIN",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T24.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0007Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "0122ee31dafe5ef051c37f294d68ba09ab2f67e30d0e02bf1ca5ca8cf7cd411f",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "invalid_gstin",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T25",
+  "title": "USD invoice against INR PO",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T25.pdf",
+      "sender": "billing@bluepeaksoftware.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "BP-2026-7731",
+       "invoice_date": "2026-11-06",
+       "po_numbers": [
+        "PO-2026-00480"
+       ],
+       "vendor_name": "Bluepeak Software Inc",
+       "vendor_gstin": null,
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "US00112233",
+       "ifsc": "SWIFT EXMPUS33",
+       "currency": "USD",
+       "taxable_value": 5000.0,
+       "cgst": 0.0,
+       "sgst": 0.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 5000.0,
+       "computed_total": 5000.0,
+       "amount_in_words": "US Dollars Five Thousand Only",
+       "irn": null,
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Software Subscription",
+         "hsn": "997331",
+         "quantity": 1,
+         "unit": "Lot",
+         "rate": 5000.0,
+         "amount": 5000.0,
+         "rate_before_tax": 5000.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "currency_mismatch",
+       "payable": 0.0,
+       "held": 5000.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T26",
+  "title": "Charge not on the PO",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T26.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1125",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 106450.0,
+       "cgst": 9580.5,
+       "sgst": 9580.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 125611.0,
+       "computed_total": 125611.0,
+       "amount_in_words": "Rupees One Lakh Twenty Five Thousand Six Hundred Eleven Only",
+       "irn": "2d742810b368ac58ca32abc85230432991221905c58ee8838cd5eafa386d0882",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [
+        {
+         "label": "Freight Charges",
+         "amount": 2500.0
+        }
+       ],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "unapproved_charge",
+       "payable": 0.0,
+       "held": 125611.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T27",
+  "title": "Closed or expired PO",
+  "group": "technical",
+  "cases": [
+   {
+    "name": "Closed",
+    "setup": {
+     "po_status": {
+      "PO-2026-00418": "closed"
+     }
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "po_closed",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   },
+   {
+    "name": "Expired",
+    "setup": {
+     "po_valid_until": {
+      "PO-2026-00418": "2026-10-31"
+     }
+    },
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "po_expired",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T28",
+  "title": "AI timeout or rate limit",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": "ai_timeout",
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "ai_unavailable",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T29",
+  "title": "AI returns broken output",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": "ai_malformed",
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "ai_output_invalid",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T30",
+  "title": "AI invents a value",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": "ai_invented_value",
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "unverified_value",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T31",
+  "title": "Prompt injection in invoice text",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "T31.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1130",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "3d6027e1b6c62f0a6b44e0aa4ce23192a3d4df30a729eb446e0c5a5e45f0b472",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "BLOCKED",
+       "reason": "prompt_injection",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T32",
+  "title": "Two invoices hit one PO at once",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": true,
+    "steps": [
+     {
+      "file": "T32a.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1131",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00510"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 60000.0,
+       "cgst": 5400.0,
+       "sgst": 5400.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 70800.0,
+       "computed_total": 70800.0,
+       "amount_in_words": "Rupees Seventy Thousand Eight Hundred Only",
+       "irn": "92867a4c9fa03e7dffbc9cd8adba0e3e9afac5e77768d4ccd70234c92a51fc6b",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Foam Inserts",
+         "hsn": "39211390",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 100.0,
+         "amount": 60000.0,
+         "rate_before_tax": 100.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "clean",
+       "payable": 70800.0,
+       "held": 0.0,
+       "deducted": 0.0
+      }
+     },
+     {
+      "file": "T32b.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": null,
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1132",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00510"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 60000.0,
+       "cgst": 5400.0,
+       "sgst": 5400.0,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 70800.0,
+       "computed_total": 70800.0,
+       "amount_in_words": "Rupees Seventy Thousand Eight Hundred Only",
+       "irn": "5f7cdb4c7129d41b78474853181e071ac26fcb004209f918c7ebd9bc2df86012",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Foam Inserts",
+         "hsn": "39211390",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 100.0,
+         "amount": 60000.0,
+         "rate_before_tax": 100.0
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "po_overrun",
+       "payable": 0.0,
+       "held": 70800.0,
+       "deducted": 0.0
+      }
+     }
+    ],
+    "note": "Either invoice may win. Exactly one is approved."
+   }
+  ]
+ },
+ {
+  "id": "T33",
+  "title": "Crash mid-run",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": "crash_after_stage_6",
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "APPROVED",
+       "reason": "clean",
+       "payable": 122661.0,
+       "held": 0.0,
+       "deducted": 0.0,
+       "ledger_entries": 1
+      }
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T34",
+  "title": "PO or vendor data unavailable",
+  "group": "technical",
+  "cases": [
+   {
+    "name": null,
+    "setup": {},
+    "concurrent": false,
+    "steps": [
+     {
+      "file": "H01.pdf",
+      "sender": "billing@kestrelpack.example",
+      "fault": "data_unavailable",
+      "truth": {
+       "document_type": "tax_invoice",
+       "invoice_number": "KP/26-27/1042",
+       "invoice_date": "2026-11-14",
+       "po_numbers": [
+        "PO-2026-00418"
+       ],
+       "vendor_name": "Kestrel Packaging Private Limited",
+       "vendor_gstin": "27ZZZCK0001Z1ZF",
+       "buyer_gstin": "27ZZZCM0002Z1ZC",
+       "bank_account": "502000123456",
+       "ifsc": "EXMP0001234",
+       "currency": "INR",
+       "taxable_value": 103950.0,
+       "cgst": 9355.5,
+       "sgst": 9355.5,
+       "igst": 0.0,
+       "round_off": 0.0,
+       "total": 122661.0,
+       "computed_total": 122661.0,
+       "amount_in_words": "Rupees One Lakh Twenty Two Thousand Six Hundred Sixty One Only",
+       "irn": "1a2ba022a29680cab6f0557d0b14721127c34a8c6e4e4238f9890b8927e3fc95",
+       "service_period": null,
+       "line_items": [
+        {
+         "description": "Corrugated Boxes 5-Ply 18x12x10",
+         "hsn": "48191010",
+         "quantity": 1200,
+         "unit": "Nos",
+         "rate": 42.5,
+         "amount": 51000.0,
+         "rate_before_tax": 42.5
+        },
+        {
+         "description": "Stretch Film 23 Micron",
+         "hsn": "39201019",
+         "quantity": 180,
+         "unit": "Kg",
+         "rate": 165.0,
+         "amount": 29700.0,
+         "rate_before_tax": 165.0
+        },
+        {
+         "description": "BOPP Packing Tape 48mm",
+         "hsn": "39191000",
+         "quantity": 600,
+         "unit": "Nos",
+         "rate": 38.75,
+         "amount": 23250.0,
+         "rate_before_tax": 38.75
+        }
+       ],
+       "extra_charges": [],
+       "tax_inclusive": false
+      },
+      "expect": {
+       "outcome": "HOLD",
+       "reason": "system_data_unavailable",
+       "payable": 0.0,
+       "held": 122661.0,
+       "deducted": 0.0
+      }
+     }
+    ]
+   }
+  ]
+ }
+]
