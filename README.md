@@ -2,9 +2,14 @@
 
 Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decision: approve, part-pay, hold, or block. Each stage and the evidence behind the decision stay visible.
 
-**Status:** the process map and test data are ready. The application is not built yet. See [the process map](docs/PROCESS.md).
+**Status:** the local Live Desk runs five invoices: a clean invoice, bank-detail fraud, a disguised duplicate, a slow PO overrun, and billed-but-not-delivered. The second scan reader, remaining edge cases, the Ledger, and the Test Lab are still in progress. See [the process map](docs/PROCESS.md).
 
-Rebuild and verify the test data with `python tools/build_test_data.py`.
+```powershell
+.venv\Scripts\python app.py    # then open http://127.0.0.1:8765
+.venv\Scripts\python pipeline.py data\invoices\H01.pdf --fresh --sender billing@kestrelpack.example
+.venv\Scripts\python test_pipeline.py
+.venv\Scripts\python tools\build_test_data.py --check
+```
 
 ## Decisions
 

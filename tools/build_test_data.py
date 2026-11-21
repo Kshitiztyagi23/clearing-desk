@@ -17,43 +17,13 @@ import pymupdf
 from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from pipeline import gstin, gstin_ok, inr, words  # noqa: E402
+
 DATA = ROOT / "data"
 PDFS = DATA / "invoices"
 AS_OF = "2026-11-21"
 OUTCOMES = {"APPROVED", "PART_PAY", "HOLD", "BLOCKED", "RETURNED"}
-GSTIN_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-
-def gstin(state, pan, entity="1"):
-    body = f"{state}{pan}{entity}Z"
-    total = sum(sum(divmod(GSTIN_CHARS.index(c) * (2 if i % 2 else 1), 36)) for i, c in enumerate(body))
-    return body + GSTIN_CHARS[(36 - total % 36) % 36]
-
-
-def gstin_ok(value):
-    return bool(re.fullmatch(r"\d{2}[A-Z]{5}\d{4}[A-Z][0-9A-Z]Z[0-9A-Z]", value or "")) and gstin(value[:2], value[2:12], value[12]) == value
-
-
-def inr(value):
-    whole, dec = f"{abs(value):.2f}".split(".")
-    if len(whole) > 3:
-        whole = ",".join(re.findall(r"\d{1,2}(?=(?:\d{2})*$)", whole[:-3])) + "," + whole[-3:]
-    return ("-" if value < 0 else "") + whole + "." + dec
-
-
-ONES = "Zero One Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve Thirteen Fourteen Fifteen Sixteen Seventeen Eighteen Nineteen".split()
-TENS = "_ _ Twenty Thirty Forty Fifty Sixty Seventy Eighty Ninety".split()
-
-
-def words(n):
-    if n < 20:
-        return ONES[n]
-    if n < 100:
-        return TENS[n // 10] + (" " + ONES[n % 10] if n % 10 else "")
-    for size, label in ((10_000_000, "Crore"), (100_000, "Lakh"), (1000, "Thousand"), (100, "Hundred")):
-        if n >= size:
-            return f"{words(n // size)} {label}" + (" " + words(n % size) if n % size else "")
-
 
 BUYERS = {
     "MRPL": {"name": "Meridian Retail Private Limited", "gstin": gstin("27", "ZZZCM0002Z"), "address": "Andheri East, Mumbai, Maharashtra 400069"},

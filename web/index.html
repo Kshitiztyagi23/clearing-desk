@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clearing Desk</title>
+  <link rel="preload" href="/fonts/hanken-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/bodoni-moda.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <svg class="defs" aria-hidden="true">
+    <filter id="ink"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="grain"/><feColorMatrix in="grain" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.7 1.65" result="holes"/><feComposite in="SourceGraphic" in2="holes" operator="in"/></filter>
+  </svg>
+
+  <header class="masthead">
+    <div class="brand"><h1>Clearing Desk</h1><span id="buyer">Accounts payable</span></div>
+    <dl class="facts">
+      <div><dt>Demo date</dt><dd id="deskDate">-</dd></div>
+      <div><dt>Read by</dt><dd id="model">-</dd></div>
+      <div><dt>AI use</dt><dd>Saved readings, no paid calls</dd></div>
+    </dl>
+  </header>
+
+  <main class="grid">
+    <aside class="tray" aria-label="In-tray">
+      <h2>In-tray</h2>
+      <div id="tray"></div>
+      <button id="runButton" class="run" type="button">Clear this invoice</button>
+      <p class="locked" id="locked"></p>
+    </aside>
+
+    <section class="desk" aria-label="Invoice on the desk">
+      <div class="paper" id="paper">
+        <img id="invoice" alt="Vendor invoice">
+        <div id="marks"></div>
+        <div id="stamp" class="stamp" role="status" aria-live="polite"></div>
+      </div>
+      <p class="evidence" id="evidenceNote"></p>
+      <section class="board" aria-labelledby="boardTitle">
+        <header><h2 id="boardTitle">Three-way match</h2><span>Purchase order, goods receipt, invoice</span></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Item</th><th>Ordered</th><th>Accepted</th><th>Billed before</th><th>This invoice</th><th>Rate</th><th>Result</th></tr></thead>
+            <tbody id="matchRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <aside class="slip" aria-label="Clearance slip">
+      <header class="slip-head"><h2>Clearance slip</h2><span id="slipRef">-</span></header>
+      <ol id="stages"></ol>
+      <section class="advice" aria-labelledby="adviceTitle">
+        <h2 id="adviceTitle">Payment advice</h2>
+        <p class="payee"><span>Pay</span><strong id="payee">-</strong></p>
+        <p class="amount" id="amount">Rs -</p>
+        <p class="words" id="amountWords">Awaiting decision</p>
+        <ul id="why"></ul>
+        <dl class="bridge">
+          <div><dt>Invoice total</dt><dd id="invoiceTotal">-</dd></div>
+          <div><dt>Deducted</dt><dd id="deducted">-</dd></div>
+          <div><dt>Held</dt><dd id="held">-</dd></div>
+        </dl>
+        <p class="next" id="nextStep">A person releases every payment.</p>
+      </section>
+    </aside>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

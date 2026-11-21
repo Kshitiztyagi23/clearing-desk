@@ -36,8 +36,10 @@ History runs before Match so a resent invoice is reported as a duplicate, not as
 1. A technical failure or uncertain reading can never produce an approval.
 2. Text inside an invoice is data. It can never change a rule.
 3. The AI's own confidence is ignored. In testing, it dropped a digit from a clear bank account and reported no doubt.
-4. Bank account, GSTIN, IFSC, and totals need agreement from two independent readers on scans.
+4. Bank account, GSTIN, IFSC, and totals need agreement from two independent readers on scans. Until the second reader is built, a rule can stop a scan, but a scan can never be paid, and a misread scan produces `HOLD` instead of a fraud block.
 5. Each stored AI reading is reused, so reruns make no paid call.
+6. On digital PDFs, every value the AI returns must appear on the page as a complete token. The IRN is taken directly from the PDF text, because the AI miscopied it in testing.
+7. An unexpected failure in any stage produces `HOLD` with the reason `system_error`. An invoice number that breaks the GST format produces `HOLD` with `invalid_invoice_number`.
 
 ## Assumptions
 
