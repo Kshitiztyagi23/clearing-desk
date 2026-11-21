@@ -11,6 +11,8 @@ import json
 import os
 import re
 import sqlite3
+import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -23,6 +25,10 @@ import pymupdf
 ROOT = Path(__file__).resolve().parent
 # GPT 6.1 Sol returned 403 INVALID_PAYMENT_INSTRUMENT. Set BEDROCK_MODEL=global.openai.gpt-6.1-sol once billing is fixed.
 MODEL = os.environ.get("BEDROCK_MODEL", "global.amazon.nova-2-lite-v1:0")
+SECOND_MODEL = os.environ.get("BEDROCK_SECOND_MODEL", "global.xai.grok-4.6")
+MIN_SCAN_DPI = 100
+CRITICAL = {"invoice_number": "invoice number", "invoice_date": "invoice date", "vendor_gstin": "vendor GSTIN", "buyer_gstin": "buyer GSTIN", "bank_account": "bank account", "ifsc": "IFSC",
+            "po_numbers": "PO number", "taxable_value": "taxable value", "total": "grand total"}
 REGION = "ap-south-1"
 PROMPT_VERSION = "1"
 AI_CALL_LIMIT = 150
@@ -40,6 +46,9 @@ taxable_value, cgst, sgst, igst, round_off, total, amount_in_words, irn, service
 line_items (array of {description, hsn, quantity, unit, rate, amount}), extra_charges (array of {label, amount}), suspicious_instructions (boolean).
 Amounts are plain numbers without commas. Use 0 for a tax head that is not charged."""
 REQUIRED = ("document_type", "invoice_number", "invoice_date", "po_numbers", "vendor_name", "vendor_gstin", "buyer_gstin", "bank_account", "ifsc", "taxable_value", "total", "line_items")
+INJECTION = re.compile(r"\b(?:ignore|disregard|override)\b.{0,30}\b(?:previous|prior|above|all)\b.{0,20}\b(?:rules?|instructions?|prompts?)\b|\bmark\s+this\s+invoice\s+approved\b|\b(?:system|assistant)\s*:\s*(?:ignore|approve|mark|pay)\b", re.I | re.S)
+# History through Act read and then write the ledger, so two invoices cannot both spend the same PO balance.
+LEDGER_LOCK = threading.RLock()
 
 
 def gstin(state, pan, entity="1"):
@@ -122,17 +131,19 @@ def bedrock_key():
     return key.strip()
 
 
-def bedrock_read(run, live=True):
+def bedrock_read(run, live=True, model=None):
     """Reads a page once. Saved readings are reused, and failed calls are never retried."""
+    model = model or MODEL
+    slot = "ai" if model == MODEL else "second_ai"
     (ROOT / "cache").mkdir(exist_ok=True)
     cache = sqlite3.connect(ROOT / "cache" / "readings.db")
     try:
         cache.execute("create table if not exists readings(key text primary key, response text, input_tokens int, output_tokens int, created_at text)")
         cache.execute("create table if not exists calls(id integer primary key, key text, created_at text)")
-        key = hashlib.sha256(f"{run.file_hash}|{MODEL}|{PROMPT_VERSION}".encode()).hexdigest()
+        key = hashlib.sha256(f"{run.file_hash}|{model}|{PROMPT_VERSION}".encode()).hexdigest()
         saved = cache.execute("select response, input_tokens, output_tokens from readings where key=?", (key,)).fetchone()
         if saved:
-            run.ai = {"source": "saved reading", "model": MODEL, "paid_calls": 0, "input_tokens": saved[1], "output_tokens": saved[2]}
+            setattr(run, slot, {"source": "saved reading", "model": model, "paid_calls": 0, "input_tokens": saved[1], "output_tokens": saved[2]})
             text = saved[0]
         else:
             if not live:
@@ -144,8 +155,8 @@ def bedrock_read(run, live=True):
             token = bedrock_key()
             body = {"system": [{"text": PROMPT}], "messages": [{"role": "user", "content": [
                 {"image": {"format": "jpeg", "source": {"bytes": base64.b64encode(run.image).decode()}}},
-                {"text": "<page_text>\n" + run.text + "\n</page_text>"}]}], "inferenceConfig": {"maxTokens": 4000, **({"temperature": 0} if "nova" in MODEL else {})}}
-            url = f"https://bedrock-runtime.{REGION}.amazonaws.com/model/{urllib.parse.quote(MODEL, safe='')}/converse"
+                {"text": "<page_text>\n" + run.text + "\n</page_text>"}]}], "inferenceConfig": {"maxTokens": 4000, **({"temperature": 0} if "nova" in model else {})}}
+            url = f"https://bedrock-runtime.{REGION}.amazonaws.com/model/{urllib.parse.quote(model, safe='')}/converse"
             request = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
             try:
                 with urllib.request.urlopen(request, timeout=120) as response:
@@ -157,7 +168,7 @@ def bedrock_read(run, live=True):
             usage = result.get("usage", {})
             cache.execute("insert into readings values (?, ?, ?, ?, ?)", (key, text, usage.get("inputTokens"), usage.get("outputTokens"), datetime.now(timezone.utc).isoformat()))
             cache.commit()
-            run.ai = {"source": "live call", "model": MODEL, "paid_calls": 1, "input_tokens": usage.get("inputTokens"), "output_tokens": usage.get("outputTokens")}
+            setattr(run, slot, {"source": "live call", "model": model, "paid_calls": 1, "input_tokens": usage.get("inputTokens"), "output_tokens": usage.get("outputTokens")})
     finally:
         cache.close()
     match = re.search(r"\{.*\}", text, re.S)
@@ -170,24 +181,36 @@ def saved_read(run):
     return bedrock_read(run, live=False)
 
 
+def second_read(run):
+    return bedrock_read(run, model=SECOND_MODEL)
+
+
+def saved_second_read(run):
+    return bedrock_read(run, live=False, model=SECOND_MODEL)
+
+
 class Run:
     def __init__(self, path, sender, db, reader, master):
         self.path, self.sender, self.db, self.reader, self.master = Path(path), sender, db, reader, master
         self.findings, self.stages, self.match_rows, self.stop, self.deducted = [], [], [], False, 0.0
-        self.scan, self.held_base, self.held = False, 0.0, 0.0
+        self.scan, self.held_base, self.held, self.extra, self.known_total, self.twin = False, 0.0, 0.0, {}, None, None
         self.file_hash = self.doc = self.reading = self.vendor_id = self.vendor = self.result = self.decision = None
-        self.text, self.image, self.ai = "", b"", {"source": "not used", "paid_calls": 0}
+        self.text, self.image, self.ai, self.second_ai = "", b"", {"source": "not used", "paid_calls": 0}, {"source": "not used", "paid_calls": 0}
+        self.second_reader, self.confirmed, self.scan_irn = None, False, False
 
     def add(self, outcome, reason, message, stop=False):
         self.findings.append({"outcome": outcome, "reason": reason, "message": message})
         self.stop = self.stop or stop
+
+    def unsure(self):
+        return self.scan and not self.confirmed
 
 
 def intake(r):
     try:
         r.master = r.master or json.loads((ROOT / "data" / "master.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return r.add("HOLD", "system_data_unavailable", "Vendor and PO data could not be loaded.", stop=True)
+        r.master = {}
     data = r.path.read_bytes()
     r.file_hash = hashlib.sha256(data).hexdigest()
     if not data.startswith(b"%PDF-") or b"%%EOF" not in data[-2048:]:
@@ -198,20 +221,67 @@ def intake(r):
         return r.add("RETURNED", "unreadable_file", "The PDF could not be opened. Ask the vendor for a new copy.", stop=True)
     if r.doc.needs_pass:
         return r.add("RETURNED", "password_protected", "The PDF is password-protected. Ask the vendor for an unlocked copy.", stop=True)
-    if r.db.execute("select 1 from runs where file_hash=? and outcome in ('APPROVED', 'PART_PAY')", (r.file_hash,)).fetchone():
+    earlier = r.db.execute("select result from runs where file_hash=? and outcome in ('APPROVED', 'PART_PAY')", (r.file_hash,)).fetchone()
+    if earlier:
+        r.known_total = json.loads(earlier[0]).get("total")
         return r.add("BLOCKED", "exact_duplicate", "This exact file was already approved.", stop=True)
     return f"{len(data) / 1024:.0f} KB PDF, {r.doc.page_count} page(s), fingerprint {r.file_hash[:12]}"
 
 
+def top_ink(page):
+    pix = page.get_pixmap(dpi=40, colorspace=pymupdf.csGRAY)
+    rows = [sum(b < 120 for b in pix.samples[y * pix.stride:y * pix.stride + pix.width]) for y in range(pix.height)]
+    return sum(rows[:len(rows) // 2]) - sum(rows[len(rows) // 2:])
+
+
+def upright(page):
+    """Turns a sideways scan upright. Invoices carry most of their ink in the top half."""
+    if page.rect.width <= page.rect.height:
+        return
+
+    def score(angle):
+        page.set_rotation(angle)
+        return top_ink(page)
+    page.set_rotation(max((90, 270), key=score))
+
+
+def solid_mark(page):
+    """Finds a filled block, such as a stamp, big enough to hide a figure. Letterhead bands at the top are ignored."""
+    pix = page.get_pixmap(dpi=50, colorspace=pymupdf.csGRAY)
+    streak = 0
+    for y in range(int(pix.height * 0.2), pix.height):
+        run = longest = 0
+        for value in pix.samples[y * pix.stride:y * pix.stride + pix.width]:
+            run = run + 1 if value < 170 else 0
+            longest = max(longest, run)
+        streak = streak + 1 if longest >= pix.width * 0.08 else 0
+        if streak >= pix.height * 0.024:
+            return True
+    return False
+
+
 def read_page(r):
     if r.doc.page_count != 1:
-        return r.add("HOLD", "low_confidence", "Multi-page documents are not supported yet.", stop=True)
+        return r.add("HOLD", "low_confidence", "This PDF has several pages that are not separate invoices. A person must review it.", stop=True)
     page = r.doc[0]
     r.text = page.get_text("text", sort=True)
-    r.image = page.get_pixmap(dpi=150, colorspace=pymupdf.csGRAY).tobytes("jpeg", jpg_quality=75)
     count = len(page.get_text("words"))
-    r.scan = count < 30
-    return "Scanned page. It can be stopped by a rule, but it cannot be paid without a second reader" if r.scan else f"Digital PDF with {count} words"
+    trace = page.get_texttrace()
+    # A scan with an OCR layer has only invisible text. Invisible figures beside printed text are a tampering sign.
+    r.scan = sum(len(s["chars"]) for s in trace if s["type"] != 3) < 100
+    if not r.scan and re.search(r"\d", "".join(chr(c[0]) for s in trace if s["type"] == 3 for c in s["chars"])):
+        r.add("BLOCKED", "text_layer_mismatch", "The PDF hides figures that are not visible on the printed page.")
+    dpi = 0
+    if r.scan:
+        dpi = max((i["width"] / ((i["bbox"][2] - i["bbox"][0]) / 72) for i in page.get_image_info() if i["bbox"][2] > i["bbox"][0]), default=0)
+        upright(page)
+        # Both checks run before any AI call. In testing, AI invented a total for a blurry fax and filled in a total hidden by a stamp.
+        if dpi < MIN_SCAN_DPI:
+            return r.add("HOLD", "low_confidence", f"This scan is about {dpi:.0f} DPI, below the {MIN_SCAN_DPI} DPI needed to trust its figures. Ask the vendor for a clearer copy.", stop=True)
+        if solid_mark(page):
+            return r.add("HOLD", "obscured_field", "A solid stamp or mark covers part of this invoice, so its figures cannot be trusted. Ask the vendor for a clean copy.", stop=True)
+    r.image = page.get_pixmap(dpi=150, colorspace=pymupdf.csGRAY).tobytes("jpeg", jpg_quality=75)
+    return f"Scanned page at about {dpi:.0f} DPI. Two AI models must agree before it can be paid" if r.scan else f"Digital PDF with {count} words"
 
 
 def understand(r):
@@ -226,13 +296,52 @@ def understand(r):
         return r.add("RETURNED", "credit_note_recorded", "This is a credit note. Record it as a credit and do not pay it.", stop=True)
     if kind != "tax_invoice":
         return r.add("RETURNED", "not_an_invoice", f"This is not a tax invoice ({kind}). Route it out.", stop=True)
-    if r.reading["suspicious_instructions"]:
+    if r.reading["suspicious_instructions"] or INJECTION.search(r.text):
         return r.add("BLOCKED", "prompt_injection", "The document contains instructions aimed at the AI.", stop=True)
     return f"Read {r.reading['invoice_number']} with {len(r.reading['line_items'])} line items ({r.ai['source']})"
 
 
+def confirm_scan(r):
+    """Two different AI models must agree on every value that moves money before a scan can be paid."""
+    if not r.second_reader:
+        return
+    try:
+        other = clean_reading(r.second_reader(r))
+    except Exception:
+        return
+    x = r.reading
+
+    def same(key):
+        if key == "po_numbers":
+            return sorted(x[key]) == sorted(other[key])
+        if key == "invoice_number":
+            return re.sub(r"[^A-Z0-9]", "", x[key].upper()) == re.sub(r"[^A-Z0-9]", "", other[key].upper())
+        if isinstance(x[key], float) and isinstance(other[key], float):
+            return abs(x[key] - other[key]) <= 0.01
+        return str(x[key]).upper() == str(other[key]).upper()
+    blank = [label for key, label in CRITICAL.items() if key != "po_numbers" and (x[key] is None or other[key] is None)]
+    if blank:
+        return r.add("HOLD", "obscured_field", "This scan does not clearly show the " + ", ".join(blank) + ". Ask the vendor for a clean copy.", stop=True)
+    # A value that breaks its official format is certainly a misread. Bank accounts have no such check, so both readers must match.
+    for key, valid in (("vendor_gstin", gstin_ok), ("buyer_gstin", gstin_ok), ("ifsc", lambda v: bool(re.fullmatch(r"[A-Z]{4}0[A-Z0-9]{6}", v)))):
+        if valid(other[key]) and not valid(x[key]):
+            x[key] = other[key]
+        elif valid(x[key]) and not valid(other[key]):
+            other[key] = x[key]
+    differ = [label for key, label in CRITICAL.items() if not same(key)]
+    if differ:
+        return r.add("HOLD", "low_confidence", "The two AI readers disagree on the " + ", ".join(differ) + ". A person must check the scan.", stop=True)
+    r.confirmed, r.scan_irn = True, bool(x["irn"] or other["irn"])
+
+
 def verify(r):
+    if not {"as_of", "vendors", "policy", "purchase_orders", "receipts"} <= set(r.master):
+        return r.add("HOLD", "system_data_unavailable", "Vendor and PO records could not be loaded. Nothing is paid until they return.", stop=True)
     x, policy, page = r.reading, r.master["policy"], r.text.upper()
+    if r.scan:
+        confirm_scan(r)
+        if r.stop:
+            return None
     # The AI miscopied a 64-character IRN in testing, so it comes from the PDF text instead.
     if not r.scan:
         irns = re.findall(r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])", r.text)
@@ -242,7 +351,7 @@ def verify(r):
             r.add("HOLD", reason, f"The {label} is missing.", stop=True)
     if r.stop:
         return None
-    values = [x["invoice_number"], x["vendor_gstin"], x["buyer_gstin"], x["bank_account"], x["ifsc"], *x["po_numbers"]] + ([x["irn"]] if x["irn"] else [])
+    values = [x["invoice_number"], x["buyer_gstin"], x["bank_account"], x["ifsc"], *x["po_numbers"]] + [v for v in (x["vendor_gstin"], x["irn"]) if v]
     amounts = [x["taxable_value"], x["total"]] + [x[k] for k in ("cgst", "sgst", "igst") if x[k]] + [l["amount"] for l in x["line_items"]]
     # Whole-token match: a dropped digit must not pass because it is a substring of the real number.
     absent = [str(v) for v in values if not v or not re.search(rf"(?<![A-Z0-9/-]){re.escape(str(v).upper())}(?![A-Z0-9/-])", page)]
@@ -251,12 +360,17 @@ def verify(r):
         return r.add("HOLD", "unverified_value", "These values were not found on the document: " + ", ".join(absent), stop=True)
     if not re.fullmatch(r"[A-Za-z0-9/-]{1,16}", x["invoice_number"]):
         r.add("HOLD", "invalid_invoice_number", "The invoice number breaks the 16-character GST format.")
-    if not gstin_ok(x["vendor_gstin"]) or not gstin_ok(x["buyer_gstin"]):
+    if (x["vendor_gstin"] and not gstin_ok(x["vendor_gstin"])) or not gstin_ok(x["buyer_gstin"]):
         r.add("HOLD", "invalid_gstin", "A GSTIN failed its check digit.", stop=True)
     try:
         issued = date.fromisoformat(x["invoice_date"])
     except ValueError:
         return r.add("HOLD", "missing_date", "The invoice date could not be understood.", stop=True)
+    shown = next((d for d in (issued.strftime("%d-%m-%Y"), issued.strftime("%d/%m/%Y")) if d in r.text), None)
+    if not r.scan and not shown:
+        return r.add("HOLD", "unverified_value", f"The invoice date {x['invoice_date']} was not found on the document.", stop=True)
+    if shown and "/" in shown and issued.day <= 12:
+        r.add("APPROVED", "date_resolved", f"{shown} was read as day first, the Indian standard.")
     today = date.fromisoformat(r.master["as_of"])
     if issued > today:
         r.add("HOLD", "future_date", f"The invoice is dated in the future ({issued}).")
@@ -268,33 +382,55 @@ def verify(r):
     x["tax_inclusive"] = abs(line_sum - x["total"]) <= 0.01 and abs(line_sum - x["taxable_value"]) > 0.01
     if abs((x["total"] if x["tax_inclusive"] else x["taxable_value"]) - line_sum) > 0.01 or abs(x["taxable_value"] + tax + x["round_off"] - x["total"]) > 0.01 or abs(x["round_off"]) > policy["rounding_tolerance_inr"]:
         r.add("HOLD", "arithmetic_mismatch", "The line items, tax, and grand total do not add up.")
+    else:
+        if x["round_off"]:
+            r.add("APPROVED", "rounding_accepted", f"Round-off of Rs {inr(x['round_off'])} is within the Rs {policy['rounding_tolerance_inr']:g} tolerance.")
+        if x["tax_inclusive"]:
+            r.add("APPROVED", "tax_inclusive", "Rates include GST, so they were converted before matching the PO.")
     if x["amount_in_words"] and x["total"] == int(x["total"]) and words(int(x["total"])).lower() not in x["amount_in_words"].lower():
         r.add("HOLD", "amount_words_conflict", "The amount in words differs from the figures.")
-    return "Dates and arithmetic checked. Scanned values still need a second reader" if r.scan else "IDs, amounts, dates, and arithmetic verified against the document"
+    if r.scan:
+        return "Two AI models agree on every value that moves money" if r.confirmed else "Dates and arithmetic checked. Scanned values are not confirmed"
+    return "IDs, amounts, dates, and arithmetic verified against the document"
+
+
+def company(name):
+    """The distinctive part of a company name, without legal suffixes or punctuation."""
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", (name or "").lower()).replace("private", " ").replace("limited", " ").replace("pvt", " ").replace("ltd", " ").replace("llp", " ").split())
 
 
 def identify(r):
     x, master = r.reading, r.master
-    r.vendor_id, r.vendor = next(((k, v) for k, v in master["vendors"].items() if v["gstin"] == x["vendor_gstin"]), (None, None))
+    name = company(x["vendor_name"])
+    # Overseas vendors have no GSTIN, so only they can be identified by name.
+    r.vendor_id, r.vendor = next(((k, v) for k, v in master["vendors"].items() if (v["gstin"] == x["vendor_gstin"] if x["vendor_gstin"] else not v["gstin"] and company(v["name"]) == name)), (None, None))
     if not r.vendor:
         # A misread scan must not accuse a real vendor of fraud.
-        if r.scan:
+        if r.unsure():
             return r.add("HOLD", "low_confidence", "The GSTIN read from this scan matches no vendor. A person must confirm it.", stop=True)
+        near = next((v["name"] for v in master["vendors"].values() if name and difflib.SequenceMatcher(None, company(v["name"]), name).ratio() >= 0.92), None)
+        if near:
+            return r.add("BLOCKED", "lookalike_vendor", f"The name resembles {near}, but the GSTIN is not theirs.", stop=True)
         return r.add("BLOCKED", "unknown_vendor", "The GSTIN does not belong to an approved vendor.", stop=True)
+    if (x["vendor_name"] or "").lower() != r.vendor["name"].lower():
+        if difflib.SequenceMatcher(None, company(r.vendor["name"]), name).ratio() >= 0.92:
+            r.add("APPROVED", "vendor_alias", f"'{x['vendor_name']}' is the same company as {r.vendor['name']}, confirmed by GSTIN.")
+        elif not r.unsure():
+            r.add("BLOCKED", "lookalike_vendor", f"The GSTIN belongs to {r.vendor['name']}, but the invoice names {x['vendor_name']}.")
     if r.sender and r.sender.rsplit("@", 1)[-1].lower() != r.vendor["email_domain"]:
         r.add("BLOCKED", "lookalike_vendor", f"The sender domain does not match {r.vendor['email_domain']}.")
     if (x["bank_account"], x["ifsc"]) != (r.vendor["bank_account"], r.vendor["ifsc"]):
         verified = any(b["vendor"] == r.vendor_id and (b["new_account"], b["new_ifsc"]) == (x["bank_account"], x["ifsc"]) for b in master["bank_changes"])
         if verified:
             r.add("APPROVED", "bank_change_verified", "The new bank account has a verified change record.")
-        elif r.scan:
+        elif r.unsure():
             r.add("HOLD", "low_confidence", "The bank details read from this scan differ from the vendor record. A person must compare them.")
         else:
             r.add("BLOCKED", "bank_mismatch", f"Invoice pays account ending {x['bank_account'][-4:]}, but the vendor record ends {r.vendor['bank_account'][-4:]}. Call the vendor's known contact.")
     if any(e["bank_account"] == x["bank_account"] for e in master["employees"]) or any(k != r.vendor_id and v["bank_account"] == x["bank_account"] for k, v in master["vendors"].items()):
         r.add("BLOCKED", "shared_bank_account", "This bank account also belongs to an employee or another vendor.")
     registration = master["gst_registry"].get(x["vendor_gstin"], {})
-    if registration.get("status") != "active":
+    if r.vendor["gstin"] and registration.get("status") != "active":
         r.add("HOLD", "gst_cancelled", "The vendor's GST registration is not active.")
     if x["buyer_gstin"] != master["buyer_entities"][master["our_entity"]]["gstin"]:
         r.add("HOLD", "wrong_buyer_entity", "The invoice is billed to a different company.")
@@ -303,7 +439,7 @@ def identify(r):
 
 def prior_invoices(r):
     rows = [json.loads(row[0]) for row in r.db.execute("select result from runs where vendor=? and outcome in ('APPROVED', 'PART_PAY')", (r.vendor_id,))]
-    current = [{"invoice_number": p["invoice_number"], "date": p.get("invoice_date"), "total": p["total"], "status": "approved", "po_numbers": p["po_numbers"], "lines": p["lines"]} for p in rows]
+    current = [{"invoice_number": p["invoice_number"], "date": p.get("invoice_date"), "total": p["total"], "status": "approved", "po_numbers": p["po_numbers"], "service_period": p.get("service_period"), "lines": p["lines"]} for p in rows]
     return current + [p for p in r.master["history"] if p["vendor"] == r.vendor_id and p["status"] in ("paid", "approved")]
 
 
@@ -316,21 +452,56 @@ def bill_lines(lines):
     return sorted((l["hsn"], float(l["quantity"]), float(l["rate"])) for l in lines)
 
 
+def span(value):
+    if isinstance(value, dict):
+        value = [value.get("from"), value.get("to")]
+    try:
+        start, end = (date.fromisoformat(d) for d in value)
+    except (TypeError, ValueError):
+        return None
+    return (start, end) if start <= end else None
+
+
 def history(r):
     x, lines = r.reading, bill_lines(r.reading["line_items"])
-    for p in prior_invoices(r):
+    prior = prior_invoices(r)
+    for p in prior:
         if p["invoice_number"] == x["invoice_number"]:
             return r.add("HOLD", "duplicate_suspected", f"Invoice {p['invoice_number']} was already {p['status']}.", stop=True)
         # Repeat orders share lines and totals, so identical content alone is not a duplicate.
-        if p["total"] == x["total"] and bill_lines(p["lines"]) == lines and (number_root(p["invoice_number"]) == number_root(x["invoice_number"]) or p.get("date") == x["invoice_date"]):
-            return r.add("HOLD", "duplicate_suspected", f"Same lines and total as {p['invoice_number']}, already {p['status']}. Only the invoice number changed.", stop=True)
+        if p["total"] == x["total"] and bill_lines(p["lines"]) == lines:
+            if number_root(p["invoice_number"]) == number_root(x["invoice_number"]):
+                return r.add("HOLD", "duplicate_suspected", f"Same lines and total as {p['invoice_number']}, already {p['status']}. Only the invoice number changed.", stop=True)
+            if p.get("date") == x["invoice_date"]:
+                r.twin = p["invoice_number"]
+    replaced = next((p for p in r.master["history"] if p["vendor"] == r.vendor_id and p["invoice_number"] == x["invoice_number"] and p["status"] == "held"), None)
+    if replaced:
+        if not re.search(r"\b(?:revised|replaces)\b", r.text, re.I):
+            return r.add("HOLD", "duplicate_suspected", f"Invoice {x['invoice_number']} is already on hold, and this copy is not marked as revised.", stop=True)
+        r.extra["supersedes"] = replaced["invoice_number"]
+        r.add("APPROVED", "revision_supersedes", f"This revised invoice replaces the held original of Rs {inr(replaced['total'])}.")
+    period = span(x["service_period"])
+    earlier = [s for s in (span(p.get("service_period")) for p in prior if set(p["po_numbers"]) & set(x["po_numbers"])) if s]
+    if period and earlier:
+        days = (period[1] - period[0]).days + 1
+        overlap = max((min(period[1], s[1]) - max(period[0], s[0])).days + 1 for s in earlier)
+        if overlap >= days:
+            return r.add("HOLD", "duplicate_suspected", "This service period was already billed in full.", stop=True)
+        if overlap > 0:
+            r.held_base = round(r.held_base + x["taxable_value"] * overlap / days, 2)
+            r.add("PART_PAY", "service_overlap", f"{overlap} of {days} service days were already billed. Pay for the other {days - overlap}.")
+        else:
+            r.add("APPROVED", "recurring_period", f"Recurring service for a new period, {period[0]} to {period[1]}.")
     return "No earlier invoice with this number or content"
 
 
 def match(r):
     x, master, tolerance = r.reading, r.master, r.master["policy"]["price_tolerance_pct"] / 100
     if not x["po_numbers"]:
-        return r.add("HOLD", "po_missing", "The invoice has no PO number.", stop=True)
+        hsns = {l["hsn"] for l in x["line_items"]}
+        r.extra["suggested_po"] = next((p["po"] for p in master["purchase_orders"].values() if p["vendor"] == r.vendor_id and p["status"] == "open" and hsns <= {l["hsn"] for l in p["lines"]}), None)
+        hint = f" {r.extra['suggested_po']} looks like the right PO." if r.extra["suggested_po"] else ""
+        return r.add("HOLD", "po_missing", "The invoice has no PO number." + hint, stop=True)
     orders = []
     for ref in x["po_numbers"]:
         po = master["purchase_orders"].get(ref)
@@ -343,6 +514,8 @@ def match(r):
         if po["currency"] != x["currency"]:
             r.add("HOLD", "currency_mismatch", f"The invoice is in {x['currency']} but {ref} is in {po['currency']}.")
         orders.append(po)
+    if len(orders) > 1:
+        r.add("APPROVED", "multi_po", f"Lines were matched across {len(orders)} purchase orders.")
     if x["extra_charges"]:
         r.add("HOLD", "unapproved_charge", "The invoice has charges that are not on the PO.")
     po_lines = [(po, l) for po in orders for l in po["lines"]]
@@ -350,7 +523,11 @@ def match(r):
     for line in x["line_items"]:
         hit = next(((po, l) for po, l in po_lines if l["hsn"] == line["hsn"] and difflib.SequenceMatcher(None, l["description"].lower(), line["description"].lower()).ratio() > 0.85), None)
         if not hit:
-            r.add("HOLD", "line_mismatch", f"'{line['description']}' does not match a PO line.")
+            po_value = sum(l["qty"] * l["rate"] for _, l in po_lines)
+            if len(x["line_items"]) == 1 and len(po_lines) > 1 and abs((line["amount"] or 0) - po_value) <= 1:
+                r.add("HOLD", "bundled_lines", f"'{line['description']}' bundles {len(po_lines)} PO lines into one. Ask the vendor for an itemised invoice.")
+            else:
+                r.add("HOLD", "line_mismatch", f"'{line['description']}' does not match a PO line.")
             continue
         po, po_line = hit
         rate = round(line["rate"] / 1.18, 3) if x["tax_inclusive"] else line["rate"]
@@ -363,7 +540,9 @@ def match(r):
             r.add("HOLD", "po_overrun", f"{line['description']}: {billed:g} already billed plus {line['quantity']:g} now is {running_total:g}, against {po_line['qty']:g} ordered.")
         receipts = [g for g in master["receipts"] if g["po"] == po["po"]]
         accepted = sum(l["accepted"] for g in receipts for l in g["lines"] if l["sku"] == po_line["sku"])
-        status = "Rate differs" if not rate_ok else "Over PO" if running_total > po_line["qty"] else "No receipt" if not receipts else "Short receipt" if running_total > accepted else "Matched"
+        received = sum(l["received"] for g in receipts for l in g["lines"] if l["sku"] == po_line["sku"])
+        failed_qc = received > accepted
+        status = "Rate differs" if not rate_ok else "Over PO" if running_total > po_line["qty"] else "No receipt" if not receipts else ("Failed QC" if failed_qc else "Short receipt") if running_total > accepted else "Matched"
         r.match_rows.append({"description": line["description"], "unit": po_line["unit"], "ordered": po_line["qty"], "accepted": accepted, "billed_before": billed, "invoiced": line["quantity"], "po_rate": po_line["rate"], "invoice_rate": rate, "status": status})
         if not receipts:
             r.add("HOLD", "awaiting_receipt", f"No goods receipt exists for {po['po']}.")
@@ -371,9 +550,12 @@ def match(r):
             payable_qty = max(0, accepted - billed)
             if payable_qty:
                 r.held_base = round(r.held_base + (line["quantity"] - payable_qty) * rate, 2)
-                r.add("PART_PAY", "short_receipt", f"{line['description']}: {line['quantity']:g} billed, {payable_qty:g} accepted. Pay for {payable_qty:g} and hold the rest.")
+                r.add("PART_PAY", "qc_rejection" if failed_qc else "short_receipt", f"{line['description']}: {line['quantity']:g} billed, {payable_qty:g} accepted{' after quality check' if failed_qc else ''}. Pay for {payable_qty:g} and hold the rest.")
             else:
-                r.add("HOLD", "short_receipt", f"{line['description']}: no accepted quantity is left to bill.")
+                r.add("HOLD", "qc_rejection" if failed_qc else "short_receipt", f"{line['description']}: no accepted quantity is left to bill.")
+    # A same-day twin is reported as a PO overrun when the PO cannot cover both, because that is the provable fact.
+    if r.twin and not any(f["reason"] == "po_overrun" for f in r.findings):
+        r.add("HOLD", "duplicate_suspected", f"Same lines, total, and date as {r.twin}, under a different invoice number.")
     return f"{len(x['line_items'])} lines matched to {', '.join(x['po_numbers'])} and its goods receipt"
 
 
@@ -384,7 +566,9 @@ def tax_and_payable(r):
         r.add("HOLD", "wrong_gst_type", "The GST type does not match the supplier and place of supply.")
     elif abs(x["cgst"] + x["sgst"] + x["igst"] - x["taxable_value"] * 0.18) > policy["rounding_tolerance_inr"]:
         r.add("HOLD", "arithmetic_mismatch", "The GST amount does not equal 18% of the taxable value.")
-    if not r.scan and r.vendor["aato_crore"] > policy["e_invoice_threshold_crore"] and not re.fullmatch(r"[0-9a-f]{64}", x["irn"] or ""):
+    # AI readers can miscopy a 64-character IRN, so a confirmed scan only needs one of them to have seen it.
+    has_irn = r.scan_irn if r.scan else bool(re.fullmatch(r"[0-9a-f]{64}", x["irn"] or ""))
+    if not r.unsure() and r.vendor["aato_crore"] > policy["e_invoice_threshold_crore"] and not has_irn:
         r.add("HOLD", "missing_irn", "This vendor must issue e-invoices, but the IRN is missing.")
     if r.held_base:
         r.held = round(r.held_base * x["total"] / x["taxable_value"], 2)
@@ -392,36 +576,60 @@ def tax_and_payable(r):
     if tds and x["taxable_value"] > tds["threshold_inr"]:
         r.deducted = round((x["taxable_value"] - r.held_base) * tds["rate_pct"] / 100, 2)
         r.add("APPROVED", "tds_deducted", f"TDS of Rs {inr(r.deducted)} withheld at {tds['rate_pct']}%.")
+    offsets = [(a, "advance_adjusted", "Advance") for a in r.master.get("advances", []) if a["po"] in x["po_numbers"]] + [(c, "credit_applied", "Credit") for c in r.master.get("credits", []) if c["vendor"] == r.vendor_id]
+    for item, reason, label in offsets:
+        taken = min(item["amount"], round(x["total"] - r.held - r.deducted, 2))
+        if taken > 0:
+            r.deducted = round(r.deducted + taken, 2)
+            r.add("PART_PAY", reason, f"{label} {item['ref']} of Rs {inr(taken)} was set off against this invoice.")
     if any(SEVERITY[f["outcome"]] >= SEVERITY["HOLD"] for f in r.findings):
         return "GST type and IRN checked. Nothing is payable while an earlier check is open"
     return f"GST type and IRN checked. Payable Rs {inr(x['total'] - r.held - r.deducted)}"
 
 
+def printed_total(text):
+    """Shows how much is on hold when the AI could not read the invoice. It is never used to pay."""
+    hit = re.search(r"Grand\s+Total[^\d]{0,20}([\d,]+\.\d{2})", text, re.I)
+    return float(hit.group(1).replace(",", "")) if hit else None
+
+
 def decide(r):
-    # Trust rule 4: without a second reader, a scan can never reach a payment.
-    if r.scan and r.reading and not any(SEVERITY[f["outcome"]] >= SEVERITY["HOLD"] for f in r.findings):
-        r.add("HOLD", "low_confidence", "This scan needs a second reader before it can be paid.")
+    # Trust rule 4: a scan reaches payment only when two independent readers agree.
+    if r.unsure() and r.reading and not any(SEVERITY[f["outcome"]] >= SEVERITY["HOLD"] for f in r.findings):
+        r.add("HOLD", "low_confidence", "The second AI reader could not confirm this scan, so it cannot be paid yet.")
+    x = r.reading or {}
+    total = x.get("total")
+    if total is None:
+        total = round(sum(x.get(k) or 0 for k in ("taxable_value", "cgst", "sgst", "igst", "round_off")), 2) or r.known_total or printed_total(r.text) or 0.0
+    policy = (r.master or {}).get("policy", {})
+    limits = policy.get("approval_limits", [])
+    role = lambda amount: next((l["role"] for l in limits if l["up_to_inr"] is None or amount <= l["up_to_inr"]), None)
+    approver = role(total)
+    if r.vendor and x.get("invoice_date") and not any(SEVERITY[f["outcome"]] >= SEVERITY["HOLD"] for f in r.findings):
+        issued = date.fromisoformat(x["invoice_date"])
+        recent = [p for p in prior_invoices(r) if p.get("date") and 0 <= (issued - date.fromisoformat(p["date"])).days <= policy["split_window_days"] and set(p["po_numbers"]) & set(x["po_numbers"])]
+        combined = round(total + sum(p["total"] for p in recent), 2)
+        if recent and role(combined) != approver:
+            r.extra.update(combined_total=combined, route_to=role(combined))
+            r.add("HOLD", "approval_split", f"With {len(recent)} recent invoice(s) on this PO, the total is Rs {inr(combined)}, which needs the {role(combined)}.")
     worst = max(r.findings, key=lambda f: SEVERITY[f["outcome"]], default=None)
-    total = (r.reading or {}).get("total") or 0.0
     outcome = worst["outcome"] if worst else "APPROVED"
-    limits = r.master["policy"]["approval_limits"] if r.master else []
-    approver = next((l["role"] for l in limits if l["up_to_inr"] is None or total <= l["up_to_inr"]), None)
     paying = outcome in ("APPROVED", "PART_PAY")
     held = r.held if outcome == "PART_PAY" else 0.0 if outcome in ("APPROVED", "RETURNED") else total
     r.decision = {"outcome": outcome, "reason": worst["reason"] if worst else "clean", "message": worst["message"] if worst else "Every check passed.", "payable": round(total - held - r.deducted, 2) if paying else 0.0,
-                  "held": held, "deducted": r.deducted if paying else 0.0, "approver": approver}
+                  "held": held, "deducted": r.deducted if paying else 0.0, "approver": approver, "total": total, "amount_known": bool(total), **r.extra}
     return r.decision["message"]
 
 
 def act(r):
     d, x = r.decision, r.reading or {}
     d["next_step"] = {"APPROVED": f"Send Rs {inr(d['payable'])} to {d['approver']} for payment approval.",
-                      "PART_PAY": f"Send Rs {inr(d['payable'])} to {d['approver']} for payment approval. Hold Rs {inr(d['held'])} until the vendor resolves it.",
+                      "PART_PAY": f"Send Rs {inr(d['payable'])} to {d['approver']} for payment approval." + (f" Hold Rs {inr(d['held'])} until the vendor resolves it." if d["held"] else ""),
                       "HOLD": "Send to a reviewer. Nothing is paid until this is resolved.",
                       "BLOCKED": "Escalate to the AP Manager. Nothing is paid.",
                       "RETURNED": "Send back to the vendor. Nothing is paid."}[d["outcome"]]
     r.result = {"file": r.path.name, "file_hash": r.file_hash, "invoice_number": x.get("invoice_number"), "invoice_date": x.get("invoice_date"), "vendor": r.vendor_id, "vendor_name": (r.vendor or {}).get("name"), "total": x.get("total"),
-                "currency": x.get("currency"), "po_numbers": x.get("po_numbers", []), "lines": x.get("line_items", []), "match": r.match_rows, **d, "findings": r.findings, "ai": r.ai, "created_at": datetime.now(timezone.utc).isoformat()}
+                "currency": x.get("currency"), "po_numbers": x.get("po_numbers", []), "service_period": x.get("service_period"), "lines": x.get("line_items", []), "match": r.match_rows, **d, "findings": r.findings, "ai": r.ai, "second_ai": r.second_ai, "scan": r.scan, "scan_confirmed": r.confirmed, "created_at": datetime.now(timezone.utc).isoformat()}
     with r.db:
         r.db.execute("insert into runs(file_hash, invoice_number, vendor, outcome, reason, payable, result, created_at) values (?, ?, ?, ?, ?, ?, ?, ?)",
                      (r.file_hash, r.result["invoice_number"], r.vendor_id, d["outcome"], d["reason"], d["payable"], json.dumps(r.result), r.result["created_at"]))
@@ -440,16 +648,32 @@ def connect(path=None):
 
 def scenario_master(master, setup):
     """The company records as they stood for one test scenario."""
-    unsupported = set(setup) - {"history", "receipts"}
+    unsupported = set(setup) - {"history", "receipts", "bank_changes", "credits", "advances", "remove_receipts", "po_status", "po_valid_until"}
     if unsupported:
         raise ValueError("Scenario setup not supported yet: " + ", ".join(sorted(unsupported)))
     state = copy.deepcopy(master)
-    state["history"] += copy.deepcopy(setup.get("history", []))
-    for receipt in state["receipts"]:
-        for line in receipt["lines"]:
-            if line["sku"] in setup.get("receipts", {}).get(receipt["po"], {}):
-                line["received"], line["accepted"] = setup["receipts"][receipt["po"]][line["sku"]]
+    for key in ("history", "bank_changes", "credits", "advances"):
+        state[key] += copy.deepcopy(setup.get(key, []))
+    state["receipts"] = [g for g in state["receipts"] if g["po"] not in setup.get("remove_receipts", [])]
+    for field, key in (("status", "po_status"), ("valid_until", "po_valid_until")):
+        for po, value in setup.get(key, {}).items():
+            state["purchase_orders"][po][field] = value
+    record_receipts(state, setup.get("receipts", {}))
     return state
+
+
+def record_receipts(state, receipts):
+    for po, skus in receipts.items():
+        receipt = next((g for g in state["receipts"] if g["po"] == po), None)
+        if not receipt:
+            receipt = {"grn": f"GRN-{po[-5:]}", "po": po, "date": state["as_of"], "lines": []}
+            state["receipts"].append(receipt)
+        for sku, (received, accepted) in skus.items():
+            line = next((l for l in receipt["lines"] if l["sku"] == sku), None)
+            if not line:
+                line = {"sku": sku}
+                receipt["lines"].append(line)
+            line.update(received=received, accepted=accepted)
 
 
 def evidence(r, number):
@@ -472,37 +696,70 @@ def evidence(r, number):
     return marks
 
 
-def process(path, sender=None, db=None, reader=bedrock_read, master=None, on_stage=None):
+def process(path, sender=None, db=None, reader=bedrock_read, master=None, on_stage=None, second_reader=None):
     r = Run(path, sender, db or connect(), reader, master)
+    r.second_reader = second_reader or {bedrock_read: second_read, saved_read: saved_second_read}.get(reader)
 
     def publish(new=()):
         if on_stage:
             latest = r.stages[-1]
             on_stage({**latest, "findings": list(new), "evidence": evidence(r, latest["stage"]) if latest["status"] != "SKIPPED" else [], "match": r.match_rows if latest["stage"] == 7 else []})
 
-    for number, (name, stage) in enumerate(STAGES, 1):
-        if r.stop and number < 9:
-            r.stages.append({"stage": number, "name": name, "status": "SKIPPED", "ms": 0, "detail": "Stopped earlier"})
-            publish()
-            continue
-        before, start = len(r.findings), time.perf_counter()
-        try:
-            detail = stage(r)
-        except Exception as exc:
-            r.add("HOLD", "system_error", f"{name} failed safely ({type(exc).__name__}).", stop=True)
-            detail = None
-            if name == "Decide":
-                raise
-            if name == "Act":
-                decide(r)
-                r.result = {"file": r.path.name, **r.decision, "findings": r.findings, "ai": r.ai}
-        new = r.findings[before:]
-        status = max((f["outcome"] for f in new), key=SEVERITY.get, default="PASS")
-        r.stages.append({"stage": number, "name": name, "status": status if status != "APPROVED" else "PASS", "ms": round((time.perf_counter() - start) * 1000), "detail": next((f["message"] for f in new if f["outcome"] != "APPROVED"), detail or "")})
-        publish(new)
-    if r.doc:
-        r.doc.close()
+    locked = False
+    try:
+        for number, (name, stage) in enumerate(STAGES, 1):
+            if number == 6:
+                LEDGER_LOCK.acquire()
+                locked = True
+            if r.stop and number < 9:
+                r.stages.append({"stage": number, "name": name, "status": "SKIPPED", "ms": 0, "detail": "Stopped earlier"})
+                publish()
+                continue
+            before, start = len(r.findings), time.perf_counter()
+            try:
+                detail = stage(r)
+            except Exception as exc:
+                r.add("HOLD", "system_error", f"{name} failed safely ({type(exc).__name__}).", stop=True)
+                detail = None
+                if name == "Decide":
+                    raise
+                if name == "Act":
+                    decide(r)
+                    r.result = {"file": r.path.name, **r.decision, "findings": r.findings, "ai": r.ai}
+            new = r.findings[before:]
+            status = max((f["outcome"] for f in new), key=SEVERITY.get, default="PASS")
+            r.stages.append({"stage": number, "name": name, "status": status if status != "APPROVED" else "PASS", "ms": round((time.perf_counter() - start) * 1000), "detail": next((f["message"] for f in new if f["outcome"] != "APPROVED"), detail or "")})
+            publish(new)
+    finally:
+        if locked:
+            LEDGER_LOCK.release()
+        if r.doc:
+            r.doc.close()
     return {**r.result, "stages": r.stages}
+
+
+def process_file(path, sender=None, db=None, reader=bedrock_read, master=None, on_stage=None, second_reader=None):
+    """Clears a PDF, splitting it first when every page is its own invoice."""
+    db = db or connect()
+    try:
+        doc = pymupdf.open(path)
+    except Exception:
+        return [process(path, sender, db, reader, master, on_stage, second_reader)]
+    with doc:
+        several = not doc.needs_pass and doc.page_count > 1 and all("TAX INVOICE" in page.get_text().upper() for page in doc)
+        if not several:
+            return [process(path, sender, db, reader, master, on_stage, second_reader)]
+        results = []
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            for index in range(doc.page_count):
+                part = pymupdf.open()
+                part.insert_pdf(doc, from_page=index, to_page=index)
+                file = Path(folder) / f"{Path(path).stem}-page-{index + 1}.pdf"
+                part.save(file)
+                part.close()
+                # The email sender can only vouch for the first invoice in a combined file.
+                results.append(process(file, sender if index == 0 else None, db, reader, master, on_stage, second_reader))
+        return results
 
 
 if __name__ == "__main__":

@@ -10,10 +10,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from pipeline import MODEL, ROOT, STAGES, connect, process, saved_read, scenario_master, words
+from pipeline import MODEL, ROOT, STAGES, connect, process, saved_read, scenario_master, upright, words
 
 # Only invoices with finished rules and a saved AI reading can run, so the UI cannot spend API calls.
-READY = ("H01", "B01", "B02", "B06", "B07")
+READY = ("H01", "B01", "B02", "B06", "B07", "B17", "B18", "B19", "B20", "T07", "T08", "T09")
 SCENARIOS = {s["id"]: s for s in json.loads((ROOT / "data" / "scenarios.json").read_text(encoding="utf-8"))}
 MASTER = json.loads((ROOT / "data" / "master.json").read_text(encoding="utf-8"))
 app = FastAPI(title="Clearing Desk", docs_url=None, redoc_url=None)
@@ -29,7 +29,7 @@ def ink_bottom(page):
     """Scans have no word positions, so find the last row with ink, ignoring the scanner's edge shadows."""
     pix = page.get_pixmap(dpi=50, colorspace=pymupdf.csGRAY)
     left, right = int(pix.width * .06), int(pix.width * .94)
-    rows = [y for y in range(int(pix.height * .97)) if sum(b < 110 for b in pix.samples[y * pix.stride + left:y * pix.stride + right]) >= 2]
+    rows = [y for y in range(int(pix.height * .97)) if sum(b < 165 for b in pix.samples[y * pix.stride + left:y * pix.stride + right]) >= 2]
     return (rows[-1] + 1) / pix.height * page.rect.height if rows else page.rect.height
 
 
@@ -38,8 +38,11 @@ def page_image(invoice_id):
     step = ready_case(invoice_id)["steps"][0]
     with pymupdf.open(ROOT / "data" / "invoices" / step["file"]) as doc:
         page = doc[0]
+        has_text = bool(page.get_text("words"))
+        if not has_text:
+            upright(page)
         bottom = max((w[3] for w in page.get_text("words")), default=None) or ink_bottom(page)
-        return page.get_pixmap(dpi=170).tobytes("png"), min(1.0, (bottom + 28) / page.rect.height), page.rect.width / page.rect.height
+        return page.get_pixmap(dpi=170).tobytes("png"), min(1.0, (bottom + 28) / page.rect.height), page.rect.width / page.rect.height, has_text
 
 
 @app.get("/api/desk")
@@ -47,10 +50,10 @@ def desk():
     tray = []
     for invoice_id in READY:
         truth = ready_case(invoice_id)["steps"][0]["truth"]
-        _, crop, ratio = page_image(invoice_id)
-        tray.append({"id": invoice_id, "title": SCENARIOS[invoice_id]["title"], "vendor": truth["vendor_name"], "invoice_number": truth["invoice_number"], "total": truth["total"],
+        _, crop, ratio, has_text = page_image(invoice_id)
+        tray.append({"id": invoice_id, "title": SCENARIOS[invoice_id]["title"], "vendor": truth["vendor_name"], "invoice_number": truth["invoice_number"], "total": truth["total"] if has_text else None,
                      "po": truth["po_numbers"], "crop": crop, "ratio": ratio})
-    return {"as_of": MASTER["as_of"], "buyer": MASTER["buyer_entities"][MASTER["our_entity"]]["name"], "model": "Amazon Nova 2 Lite" if "nova-2-lite" in MODEL else MODEL,
+    return {"as_of": MASTER["as_of"], "buyer": MASTER["buyer_entities"][MASTER["our_entity"]]["name"], "model": ("Nova 2 Lite" if "nova-2-lite" in MODEL else MODEL) + ", scans confirmed by Grok 4.6",
             "stages": [name for name, _ in STAGES], "tray": tray, "locked": len(SCENARIOS) - len(READY)}
 
 

@@ -2,12 +2,13 @@
 
 Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decision: approve, part-pay, hold, or block. Each stage and the evidence behind the decision stay visible.
 
-**Status:** the local Live Desk runs five invoices: a clean invoice, bank-detail fraud, a disguised duplicate, a slow PO overrun, and billed-but-not-delivered. The second scan reader, remaining edge cases, the Ledger, and the Test Lab are still in progress. See [the process map](docs/PROCESS.md).
+**Status:** the local Live Desk runs 12 invoices, including fraud, duplicates, part-payments, and damaged scans. All 61 test cases pass offline. The Ledger, Test Lab, and deployment are still in progress. See [the process map](docs/PROCESS.md).
 
 ```powershell
 .venv\Scripts\python app.py    # then open http://127.0.0.1:8765
 .venv\Scripts\python pipeline.py data\invoices\H01.pdf --fresh --sender billing@kestrelpack.example
 .venv\Scripts\python test_pipeline.py
+.venv\Scripts\python test_scenarios.py    # every scenario, offline, no AI calls
 .venv\Scripts\python tools\build_test_data.py --check
 ```
 
@@ -19,7 +20,7 @@ Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decisio
 | Decisions | Plain-code rules | The same invoice always gets the same, explainable result |
 | App | Python, FastAPI, SQLite, plain HTML/CSS/JS | Few moving parts during a live demo |
 | PDF | PyMuPDF for text, positions, and page images | One library covers all three |
-| Scans | Tesseract as a second reader for bank account, GSTIN, IFSC, and totals | In testing, the AI dropped a digit from a clear bank account number and did not flag it |
+| Scans | Grok 4.6 on Bedrock as an independent second reader | In testing, one AI dropped a digit from a clear bank account number and did not flag it |
 | Hosting | AWS EC2 `t4g.small`, Mumbai, 2 GB RAM, 20 GB disk | Runs on AWS Free plan credits, always on, and keeps run history |
 
 ## Data standards

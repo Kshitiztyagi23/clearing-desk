@@ -76,4 +76,35 @@ repeat_setup = {"history": scenarios["B06"]["cases"][0]["setup"]["history"][:1],
 legit = process(ROOT / "data/invoices/B06.pdf", sender, connect(":memory:"), reader_for({**repeat, "suspicious_instructions": False}), scenario_master(master, repeat_setup))
 assert (legit["outcome"], legit["reason"]) == ("APPROVED", "clean"), f"a repeat order with a new number and date is not a duplicate: {legit['reason']}"
 
-print("OK: happy path, 4 Day 4 scenarios, repeat order, and 13 failure cases passed, 0 AI calls")
+same_day = {**repeat_setup, "history": [{**repeat_setup["history"][0], "date": repeat["invoice_date"]}]}
+twin = process(ROOT / "data/invoices/B06.pdf", sender, connect(":memory:"), reader_for({**repeat, "suspicious_instructions": False}), scenario_master(master, same_day))
+assert (twin["outcome"], twin["reason"]) == ("HOLD", "duplicate_suspected"), f"a same-day twin the PO can cover must still be held: {twin['reason']}"
+
+scan = {**scenarios["B02"]["cases"][0]["steps"][0]["truth"], "suspicious_instructions": False}
+scan_pdf = ROOT / "data/invoices/B02.pdf"
+
+
+def two_readers(second, first=scan, file=scan_pdf):
+    return process(file, sender, connect(":memory:"), reader_for(first), None, None, second)
+
+
+agreed = two_readers(reader_for(scan))
+assert (agreed["outcome"], agreed["payable"], agreed["scan_confirmed"]) == ("APPROVED", 122661.0, True), "a scan both readers agree on can be paid"
+for label, second, reason in (("readers disagree on bank", reader_for({**scan, "bank_account": "502000123457"}), "low_confidence"), ("readers disagree on total", reader_for({**scan, "total": 132661.0}), "low_confidence"),
+                              ("second reader cannot see total", reader_for({**scan, "total": None}), "obscured_field"), ("second reader is down", broken, "low_confidence"), ("second reader returns junk", reader_for({"junk": 1}), "low_confidence")):
+    held = two_readers(second)
+    assert (held["outcome"], held["reason"], held["payable"]) == ("HOLD", reason, 0), f"{label}: {held['outcome']} {held['reason']}"
+fraud = {**scan, "bank_account": "918273645501", "ifsc": "EXMP0009988"}
+assert two_readers(reader_for(fraud), fraud)["reason"] == "bank_mismatch", "a bank change both readers confirm on a scan is real fraud evidence"
+for sid, reason in (("T08", "low_confidence"), ("T09", "obscured_field")):
+    known = {**scenarios[sid]["cases"][0]["steps"][0]["truth"], "suspicious_instructions": False}
+    spent = []
+    spy = lambda run: spent.append(1) or copy.deepcopy(known)
+    stopped = process(ROOT / f"data/invoices/{sid}.pdf", sender, connect(":memory:"), spy, None, None, spy)
+    assert (stopped["outcome"], stopped["reason"], stopped["payable"], stopped["amount_known"], spent) == ("HOLD", reason, 0, False, []), f"{sid} must stop before any AI call, even if both readers would agree"
+misread = {**scan, "buyer_gstin": "27ZZZZCM0002Z1ZC", "ifsc": "EXMP00012234"}
+assert two_readers(reader_for(scan), misread)["outcome"] == "APPROVED" and two_readers(reader_for(misread), scan)["outcome"] == "APPROVED", "a value that breaks its official format is a misread"
+assert two_readers(reader_for({**scan, "ifsc": "EXMP0001235"}))["reason"] == "low_confidence", "two valid but different IFSCs must be held"
+assert two_readers(reader_for({**scan, "invoice_number": "KP/26/27/1042-A"}))["outcome"] == "APPROVED", "a changed separator is not a disagreement"
+
+print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, and 13 failure cases passed, 0 AI calls")

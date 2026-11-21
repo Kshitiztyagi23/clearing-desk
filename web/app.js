@@ -5,7 +5,7 @@ const qty = (value) => Number(value).toLocaleString("en-IN");
 const STAMP = { APPROVED: "APPROVED", PART_PAY: "PART-PAY", HOLD: "HOLD", BLOCKED: "BLOCKED", RETURNED: "RETURNED" };
 const LABEL = { PASS: "Cleared", HOLD: "Hold", BLOCKED: "Blocked", RETURNED: "Returned", PART_PAY: "Part-pay", SKIPPED: "Skipped", APPROVED: "Approved" };
 const FOCUS = { bank_mismatch: ["Bank account", "IFSC"] };
-const FLAG = { "Over PO": [3, 4], "Short receipt": [2], "No receipt": [2], "Rate differs": [5] };
+const FLAG = { "Over PO": [3, 4], "Short receipt": [2], "Failed QC": [2], "No receipt": [2], "Rate differs": [5] };
 const PACE = matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 430;
 const params = new URLSearchParams(location.search);
 // Palette preview. Remove the two unused looks once one is chosen.
@@ -112,9 +112,9 @@ function finish(result) {
   $("amount").textContent = rupees(result.payable);
   $("amountWords").textContent = result.amount_words;
   $("why").replaceChildren(...result.findings.filter((f) => f.outcome !== "APPROVED").map((f) => el("li", f.outcome, f.message)));
-  $("invoiceTotal").textContent = rupees(result.total);
+  $("invoiceTotal").textContent = result.amount_known === false ? "Not readable" : rupees(result.total);
   $("deducted").textContent = rupees(result.deducted);
-  $("held").textContent = rupees(result.held);
+  $("held").textContent = result.amount_known === false ? "Whole invoice" : rupees(result.held);
   $("nextStep").textContent = result.next_step || result.message;
   if (reached[7]?.status === "SKIPPED") $("matchRows").querySelector(".empty").textContent = "Not matched, because an earlier check stopped this invoice.";
   const decided = stageNodes[8];
@@ -141,7 +141,7 @@ function drawTray() {
     doc.type = "button";
     doc.disabled = running;
     doc.setAttribute("aria-pressed", String(item === current));
-    doc.append(el("strong", "", item.title), el("span", "", item.invoice_number), el("b", "", rupees(item.total)));
+    doc.append(el("strong", "", item.title), el("span", "", item.invoice_number), el("b", "", item.total === null ? "Scanned" : rupees(item.total)));
     if (item.outcome) doc.append(el("i", "", LABEL[item.outcome]));
     doc.addEventListener("click", () => selectInvoice(item));
     return doc;
@@ -151,6 +151,10 @@ function drawTray() {
 function selectInvoice(item) {
   if (running) return;
   current = item;
+  const url = new URL(location.href);
+  url.searchParams.delete("run");
+  url.searchParams.set("invoice", item.id);
+  history.replaceState(null, "", url);
   $("paper").style.aspectRatio = `${current.ratio} / ${current.crop}`;
   $("invoice").src = `/api/invoice/${current.id}.png`;
   $("runButton").textContent = "Clear this invoice";
@@ -164,7 +168,7 @@ function runInvoice() {
   resetRun();
   drawTray();
   $("runButton").disabled = true;
-  $("runButton").textContent = "Clearing...";
+  $("runButton").textContent = "Clearing…";
   stageNodes[0].classList.replace("pending", "running");
   const queue = [];
   let streamDone = false;
@@ -198,9 +202,10 @@ async function start() {
   $("model").textContent = desk.model;
   $("locked").textContent = `${desk.locked} more test cases unlock as their rules are finished.`;
   $("runButton").addEventListener("click", runInvoice);
-  const wanted = params.get("run");
+  const autoRun = params.get("run");
+  const wanted = autoRun || params.get("invoice");
   selectInvoice(desk.tray.find((item) => item.id === wanted) || desk.tray[0]);
-  if (wanted) runInvoice();
+  if (autoRun) runInvoice();
 }
 
 start().catch(() => { $("nextStep").textContent = "The desk could not load. Check that the local app is running."; });
