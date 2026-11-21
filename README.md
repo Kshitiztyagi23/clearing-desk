@@ -8,12 +8,12 @@ Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decisio
 
 | Area | Choice | Reason |
 |---|---|---|
-| AI | Gemini `gemini-3.8-flash` for reading invoices only | Stable model with PDF input and JSON-schema output |
+| AI | Amazon Nova 2 Lite on Bedrock for reading invoices only | Read 16 of 17 test fields from a degraded scan in 3.5 seconds |
 | Decisions | Plain-code rules | The same invoice always gets the same, explainable result |
 | App | Python, FastAPI, SQLite, plain HTML/CSS/JS | Few moving parts during a live demo |
 | PDF | PyMuPDF for text, positions, and page images | One library covers all three |
-| Scans | Tesseract as a second reader | An independent check on values the AI reads from images |
-| Hosting | Render, Singapore, 2 GB RAM, 1 GB persistent disk | Nearest available region, always on, and keeps run history |
+| Scans | Tesseract as a second reader for bank account, GSTIN, IFSC, and totals | In testing, the AI dropped a digit from a clear bank account number and did not flag it |
+| Hosting | AWS EC2 `t4g.small`, Mumbai, 2 GB RAM, 20 GB disk | Runs on AWS Free plan credits, always on, and keeps run history |
 
 ## Data standards
 
