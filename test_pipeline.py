@@ -224,9 +224,9 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
     above.update(taxable_value=101050.0, cgst=9094.5, sgst=9094.5, total=119239.0, amount_in_words=None)
     assert printed(above, "B07", folder, "above")["reason"] == "line_mismatch", "a price beyond tolerance must be held"
 
-    real_root, real_open, calls = pipeline.ROOT, pipeline.urllib.request.urlopen, []
+    real_root, real_open, real_key, calls = pipeline.ROOT, pipeline.urllib.request.urlopen, pipeline.bedrock_key, []
     try:
-        pipeline.ROOT = Path(folder)
+        pipeline.ROOT, pipeline.bedrock_key = Path(folder), lambda: "test-only"
         replies = [reply("I cannot read this"), reply(json.dumps(good))]
         pipeline.urllib.request.urlopen = lambda *_a, **_k: replies.pop(0)
         assert process(pdf, sender, connect(":memory:"), pipeline.bedrock_read, master)["reason"] == "ai_output_invalid"
@@ -246,7 +246,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
             thread.join()
         assert (len(calls), both) == (1, ["APPROVED", "APPROVED"]), "clearing one new invoice twice at once must make one paid call"
     finally:
-        pipeline.ROOT, pipeline.urllib.request.urlopen = real_root, real_open
+        pipeline.ROOT, pipeline.urllib.request.urlopen, pipeline.bedrock_key = real_root, real_open, real_key
 
 import asyncio  # noqa: E402
 
