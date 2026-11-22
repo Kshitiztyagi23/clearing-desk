@@ -245,38 +245,27 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
         for thread in threads:
             thread.join()
         assert (len(calls), both) == (1, ["APPROVED", "APPROVED"]), "clearing one new invoice twice at once must make one paid call"
+        pipeline.DAILY_AI_LIMIT, spent_before = 1, len(calls)
+        capped = process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), pipeline.bedrock_read, master)
+        assert (capped["reason"], capped["payable"], len(calls)) == ("ai_unavailable", 0, spent_before), "the daily limit must stop new paid calls, including the backup model"
+        pipeline.DAILY_LIMIT_FROM = pipeline.datetime.now(pipeline.timezone.utc).isoformat()
+        process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), pipeline.bedrock_read, master)
+        assert len(calls) == spent_before + 1, "calls made before the site's limit started must not count"
     finally:
-        pipeline.ROOT, pipeline.urllib.request.urlopen, pipeline.bedrock_key = real_root, real_open, real_key
-
-import asyncio  # noqa: E402
+        pipeline.ROOT, pipeline.urllib.request.urlopen, pipeline.bedrock_key, pipeline.DAILY_AI_LIMIT, pipeline.DAILY_LIMIT_FROM = real_root, real_open, real_key, 0, ""
 
 import app  # noqa: E402
+from fastapi import HTTPException  # noqa: E402
 
-
-def gate_status(path, cookie=""):
-    sent, reached = [], []
-
-    async def inner(_scope, _receive, _send):
-        reached.append(path)
-
-    async def send(message):
-        sent.append(message)
-
-    async def receive():
-        return {"type": "http.request", "body": b"", "more_body": False}
-    scope = {"type": "http", "method": "GET", "path": path, "raw_path": path.encode(), "query_string": b"", "root_path": "", "scheme": "http", "server": ("test", 80), "headers": [(b"cookie", cookie.encode())]}
-    asyncio.run(app.PasscodeGate(inner)(scope, receive, send))
-    return "open" if reached else sent[0]["status"]
-
-
-real_code, app.PASSCODE = app.PASSCODE, "test-only-code"
+real_owner, app.OWNER_CODE = app.OWNER_CODE, "test-only-code"
 try:
-    good_cookie = "desk=" + app.session_value(int(time.time()) + 60)
-    expired_cookie = "desk=" + app.session_value(int(time.time()) - 60)
-    assert (gate_status("/api/desk"), gate_status("/"), gate_status("/login.html"), gate_status("/api/health")) == (401, 303, "open", "open"), "only sign-in files may be public"
-    assert gate_status("/api/desk", good_cookie) == "open" and gate_status("/api/desk", expired_cookie) == 401 and gate_status("/api/desk", good_cookie[:-1] + "x") == 401, "only a valid, unexpired session may enter"
-    assert gate_status("/fonts/../index.html") == 303, "a path trick must not skip sign-in"
+    for headers in ({}, {"x-owner-code": "wrong"}):
+        try:
+            app.reset_ledger(type("Request", (), {"headers": headers})())
+            raise AssertionError("clearing history must need the owner code")
+        except HTTPException as refused:
+            assert refused.status_code == 403
 finally:
-    app.PASSCODE = real_code
+    app.OWNER_CODE = real_owner
 
-print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, backup reader, money rules, sign-in, and 13 failure cases passed, 0 AI calls")
+print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, backup reader, money rules, public-site limits, and 13 failure cases passed, 0 AI calls")

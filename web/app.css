@@ -224,19 +224,6 @@ table.ledger { min-width: 1020px; }
 .entry-trail .HOLD em { color: var(--on-hold); } .entry-trail .BLOCKED em { color: var(--on-block); } .entry-trail .PART_PAY em { color: var(--on-part); } .entry-trail .RETURNED em, .entry-trail .SKIPPED em { color: var(--on-soft); }
 .entry-trail small { grid-column: 1 / -1; color: var(--on-soft); font-size: .8125rem; }
 
-.login-page { display: grid !important; place-items: center; min-height: 100vh; padding: 1rem; overflow: auto !important; }
-.login { width: min(100%, 26rem); padding: 1.75rem; color: var(--on-instrument); background: var(--instrument); border-radius: 14px; box-shadow: 0 10px 26px rgb(23 27 52 / .26); }
-.login h1 { color: var(--on-instrument); }
-.login > p { margin-top: .35rem; color: var(--on-soft); }
-.login form { display: grid; gap: .4rem; margin-top: 1.25rem; }
-.login label { font-weight: 600; }
-.login input { width: 100%; padding: .6rem .7rem; color: var(--ink); font: inherit; background: var(--paper); border: 1px solid var(--line); border-radius: 7px; }
-.login input:focus-visible { outline-color: var(--mark); }
-#loginError { min-height: 1.4em; color: var(--on-block); font-size: .9375rem; }
-.login .run { color: var(--instrument); background: var(--on-instrument); }
-.login .run:hover { background: #fff; }
-.login .run:disabled { color: var(--instrument); background: var(--on-soft); }
-
 /* Only wide screens lock the desk to the window, so each pane scrolls by itself. */
 @media (min-width: 1181px) {
   html, body { height: 100%; }

@@ -459,7 +459,10 @@ function wire() {
   });
   $("resetLedger").addEventListener("click", async () => {
     if (!confirm("Clear all ledger history? Saved AI readings stay, so this costs no API calls.")) return;
-    await fetch("/api/ledger/reset", { method: "POST" });
+    const code = desk.owner_locked ? prompt("Enter the owner code") : "";
+    if (code === null) return;
+    const cleared = await fetch("/api/ledger/reset", { method: "POST", headers: { "X-Owner-Code": code } });
+    if (!cleared.ok) return alert("That owner code is not correct. History was not cleared.");
     desk.tray.forEach((item) => { delete item.outcome; });
     drawTray();
     $("entryPanel").hidden = true;
@@ -475,9 +478,8 @@ function wire() {
 }
 
 async function start() {
-  const response = await fetch("/api/desk");
-  if (response.status === 401) return location.replace("/login.html");
-  desk = await response.json();
+  desk = await (await fetch("/api/desk")).json();
+  $("resetLedger").hidden = desk.owner_locked && !params.has("owner");  // Reviewers never see this. The owner opens ?view=ledger&owner=1.
   $("buyer").textContent = desk.buyer;
   $("deskDate").textContent = deskDate(desk.as_of);
   $("model").textContent = desk.model;

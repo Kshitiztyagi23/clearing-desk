@@ -1,6 +1,4 @@
-"""Clearing Desk app: python app.py, then open http://127.0.0.1:8765. Set DESK_PASSCODE to require sign-in."""
-import asyncio
-import hashlib
+"""Clearing Desk app: python app.py, then open http://127.0.0.1:8765. Set DESK_PASSCODE so only the owner can clear history."""
 import hmac
 import json
 import os
@@ -12,14 +10,13 @@ import uuid
 from contextlib import closing
 from datetime import datetime, timezone
 from functools import lru_cache
-from http.cookies import CookieError, SimpleCookie
 from pathlib import Path
 from urllib.parse import unquote
 
 import pymupdf
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
@@ -34,44 +31,8 @@ MAX_KEPT_UPLOADS = 30
 SCENARIOS = {s["id"]: s for s in json.loads((ROOT / "data" / "scenarios.json").read_text(encoding="utf-8"))}
 MASTER = json.loads((ROOT / "data" / "master.json").read_text(encoding="utf-8"))
 UPLOADS = {}
-PASSCODE = os.environ.get("DESK_PASSCODE", "")
-SESSION_SECONDS = 12 * 3600
-OPEN_PATHS = {"/login.html", "/app.css", "/rosette.svg", "/api/login", "/api/health"}
+OWNER_CODE = os.environ.get("DESK_PASSCODE", "")
 app = FastAPI(title="Clearing Desk", docs_url=None, redoc_url=None)
-
-
-def session_value(expires):
-    key = hashlib.sha256(b"clearing-desk-session" + PASSCODE.encode()).digest()
-    return f"{expires}.{hmac.new(key, str(expires).encode(), hashlib.sha256).hexdigest()}"
-
-
-def signed_in(cookie_header):
-    try:
-        value = SimpleCookie(cookie_header)["desk"].value
-    except (KeyError, CookieError):
-        return False
-    expires = value.partition(".")[0]
-    return expires.isdigit() and int(expires) > time.time() and hmac.compare_digest(value, session_value(expires))
-
-
-class PasscodeGate:
-    """Protects every page and API on a public server. Without DESK_PASSCODE, as on a laptop, it does nothing."""
-
-    def __init__(self, inner):
-        self.inner = inner
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or not PASSCODE:
-            return await self.inner(scope, receive, send)
-        path = scope["path"]
-        cookie = dict(scope["headers"]).get(b"cookie", b"").decode("latin-1")
-        if ".." not in path and (path in OPEN_PATHS or path.startswith("/fonts/") or signed_in(cookie)):
-            return await self.inner(scope, receive, send)
-        blocked = JSONResponse({"detail": "Sign in first."}, 401) if path.startswith("/api/") else RedirectResponse("/login.html", 303)
-        await blocked(scope, receive, send)
-
-
-app.add_middleware(PasscodeGate)
 
 
 def open_ledger():
@@ -138,25 +99,10 @@ def health():
     return {"ok": True}
 
 
-@app.post("/api/login")
-async def login(request: Request):
-    body = await request.body()
-    try:
-        code = json.loads(body).get("code", "") if len(body) < 500 else ""
-    except (ValueError, AttributeError):
-        code = ""
-    if not PASSCODE or not isinstance(code, str) or not hmac.compare_digest(code.encode(), PASSCODE.encode()):
-        await asyncio.sleep(1)  # Slows down guessing.
-        raise HTTPException(401, "That access code is not correct.")
-    response = JSONResponse({"ok": True})
-    response.set_cookie("desk", session_value(int(time.time()) + SESSION_SECONDS), max_age=SESSION_SECONDS, httponly=True, samesite="lax", secure=request.headers.get("x-forwarded-proto") == "https")
-    return response
-
-
 @app.get("/api/desk")
 def desk():
     return {"as_of": MASTER["as_of"], "buyer": MASTER["buyer_entities"][MASTER["our_entity"]]["name"], "model": ("Opus 5.5" if "opus-5-5" in MODEL else MODEL) + ", Grok 4.6 for scans",
-            "stages": [name for name, _ in STAGES], "tray": [tray_item(i) for i in reversed(list(UPLOADS))] + [tray_item(i) for i in READY]}
+            "stages": [name for name, _ in STAGES], "tray": [tray_item(i) for i in READY], "owner_locked": bool(OWNER_CODE)}  # Uploads stay with the visitor who added them.
 
 
 @app.get("/api/invoice/{invoice_id}.png")
@@ -274,7 +220,10 @@ def ledger_entry(entry: int):
 
 
 @app.post("/api/ledger/reset")
-def reset_ledger():
+def reset_ledger(request: Request):
+    if OWNER_CODE and not hmac.compare_digest(request.headers.get("x-owner-code", "").encode(), OWNER_CODE.encode()):
+        time.sleep(1)  # Slows down guessing.
+        raise HTTPException(403, "Only the desk owner can clear history.")
     with closing(open_ledger()) as db, db:
         db.execute("delete from ledger")
     with closing(connect()) as db, db:

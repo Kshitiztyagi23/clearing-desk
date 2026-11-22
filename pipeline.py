@@ -35,6 +35,8 @@ CRITICAL = {"invoice_number": "invoice number", "invoice_date": "invoice date", 
 REGION = "ap-south-1"
 PROMPT_VERSION = "1"
 AI_CALL_LIMIT = 150
+DAILY_AI_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", 0))  # A public site sets this so visitors cannot run up the AI bill.
+DAILY_LIMIT_FROM = os.environ.get("AI_LIMIT_FROM", "")  # Calls copied over from testing do not use up a new site's first day.
 SEVERITY = {"APPROVED": 0, "PART_PAY": 1, "HOLD": 2, "BLOCKED": 3, "RETURNED": 4}
 GSTIN_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ONES = "Zero One Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve Thirteen Fourteen Fifteen Sixteen Seventeen Eighteen Nineteen".split()
@@ -160,6 +162,9 @@ def read_with(run, model, live, slot):
             raise RuntimeError("No saved AI reading exists for this invoice")
         if cache.execute("select count(*) from calls").fetchone()[0] >= AI_CALL_LIMIT:
             raise RuntimeError(f"AI call limit of {AI_CALL_LIMIT} reached")
+        today = datetime.now(timezone.utc).date().isoformat()
+        if DAILY_AI_LIMIT and cache.execute("select count(*) from calls where created_at >= ?", (max(today, DAILY_LIMIT_FROM),)).fetchone()[0] >= DAILY_AI_LIMIT:
+            raise RuntimeError("today's limit for reading new invoices is reached. The invoices already on the desk still work.")
         cache.execute("insert into calls(key, created_at) values (?, ?)", (key, datetime.now(timezone.utc).isoformat()))
         cache.commit()
         token = bedrock_key()
