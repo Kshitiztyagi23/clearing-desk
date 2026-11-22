@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#e7eaf3">
   <link rel="icon" href="data:,">
   <title>Clearing Desk</title>
-  <link rel="preload" href="/fonts/hanken-grotesk.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/bodoni-moda.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-serif-600.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -36,7 +36,7 @@
       <div class="upload" id="dropZone">
         <label class="choose">Add an invoice PDF<input id="fileInput" type="file" accept="application/pdf,.pdf"></label>
         <label class="sender">Sender email, optional<input id="senderInput" name="sender" type="email" autocomplete="off" spellcheck="false" placeholder="billing@vendor.example…"></label>
-        <p id="uploadNote" role="status">A new file uses 1 AI call when cleared, or 2 if it is a scan.</p>
+        <p id="uploadNote" role="status">New files use 1 AI call, or 2 for scans.</p>
       </div>
       <div id="tray"></div>
       <button id="runButton" class="run" type="button">Clear this invoice</button>
@@ -65,10 +65,14 @@
       <header class="slip-head"><h2>Clearance slip</h2><span id="slipRef">-</span></header>
       <ol id="stages"></ol>
       <section class="advice" aria-labelledby="adviceTitle">
-        <h2 id="adviceTitle">Payment advice</h2>
-        <p class="payee"><span>Pay</span><strong id="payee">-</strong></p>
-        <p class="amount" id="amount">Rs -</p>
-        <p class="words" id="amountWords">Awaiting decision</p>
+        <header class="advice-head">
+          <h2 id="adviceTitle">Payment advice</h2>
+          <p class="payee"><span>Pay</span><strong id="payee">-</strong></p>
+        </header>
+        <div class="sum">
+          <p class="amount" id="amount">Rs -</p>
+          <p class="words" id="amountWords">Awaiting decision</p>
+        </div>
         <ul id="why"></ul>
         <dl class="bridge">
           <div><dt>Invoice total</dt><dd id="invoiceTotal">-</dd></div>
@@ -119,7 +123,7 @@
     <div class="filters" id="labFilters" role="group" aria-label="Filter test cases"></div>
     <div class="table-wrap ledger-wrap">
       <table class="ledger lab-table">
-        <thead><tr><th>Case</th><th>What it tests</th><th>Type</th><th>Expected decision</th><th>Real AI run</th><th>Result</th></tr></thead>
+        <thead><tr><th>Case</th><th>What it tests</th><th>Type</th><th>Expected decision</th><th>Real AI check</th><th>Result</th></tr></thead>
         <tbody id="labRows"></tbody>
       </table>
     </div>

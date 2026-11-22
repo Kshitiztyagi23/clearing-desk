@@ -48,7 +48,7 @@ function showMarks(stage, only) {
   note.replaceChildren();
   if (stage) {
     const names = [...new Set(marks.map((mark) => mark.label))];
-    note.append(el("b", "", `${stage.name}: `), names.length ? `highlighted ${names.join(", ")}` : stage.detail);
+    note.append(el("b", "", stage.status === "SKIPPED" ? `${stage.name}: ` : `${stage.name}, ${stage.ms} ms: `), stage.detail + (names.length ? ` Highlighted: ${names.join(", ")}.` : ""));
   } else {
     note.textContent = "Clear the invoice, then select any stage to see what it checked.";
   }
@@ -65,7 +65,11 @@ function buildStages() {
     const title = el("b");
     title.append(el("i", "", String(index + 1)), name);
     button.append(title, el("em", "", "Waiting"), el("small", "", " "));
-    button.addEventListener("click", () => reached[index + 1] && showMarks(reached[index + 1]));
+    button.addEventListener("click", () => {
+      if (!reached[index + 1]) return;
+      showMarks(reached[index + 1]);
+      if (index === 6) document.querySelector(".board").scrollIntoView({ block: "nearest", behavior: PACE === 40 ? "auto" : "smooth" });
+    });
     row.append(button);
     $("stages").append(row);
     return button;
@@ -102,9 +106,9 @@ function drawMatch(rows) {
   $("matchRows").replaceChildren(...rows.map((row) => {
     const tr = el("tr");
     const flagged = FLAG[row.status] || [];
-    [row.description, `${qty(row.ordered)} ${row.unit}`, qty(row.accepted), qty(row.billed_before), qty(row.invoiced), money.format(row.invoice_rate)].forEach((value, index) => tr.append(el("td", flagged.includes(index) ? "flag" : "", value)));
+    [row.description, `${qty(row.ordered)} ${row.unit}`, qty(row.accepted), qty(row.billed_before), qty(row.invoiced), Math.abs(row.invoice_rate - row.po_rate) >= 0.01 ? `${money.format(row.invoice_rate)} (PO ${money.format(row.po_rate)})` : money.format(row.invoice_rate)].forEach((value, index) => tr.append(el("td", flagged.includes(index) ? "flag" : "", value)));
     const result = el("td");
-    result.append(el("span", row.status === "Matched" ? "good" : "bad", row.status));
+    result.append(el("span", ["Matched", "Within tolerance"].includes(row.status) ? "good" : "bad", row.status));
     tr.append(result);
     return tr;
   }));
@@ -115,13 +119,13 @@ function showStage(event) {
   const node = stageNodes[event.stage - 1];
   node.className = `stage ${event.status}`;
   node.disabled = false;
-  node.querySelector("em").textContent = event.status === "SKIPPED" ? LABEL.SKIPPED : `${LABEL[event.status]}, ${event.ms} ms`;
+  node.querySelector("em").textContent = LABEL[event.status];
   const detail = node.querySelector("small");
   detail.textContent = event.detail;
   detail.title = event.detail;
   stageNodes[event.stage]?.classList.replace("pending", "running");
   drawMatch(event.match);
-  if (event.evidence?.length) showMarks(event);
+  showMarks(event);
 }
 
 function showDraft(draft) {
@@ -142,7 +146,7 @@ function finish(result, step) {
   if (result.vendor_name) $("payee").textContent = result.vendor_name;
   $("amount").textContent = rupees(result.payable);
   $("amountWords").textContent = result.amount_words;
-  $("why").replaceChildren(...result.findings.filter((f) => f.outcome !== "APPROVED").map((f) => el("li", f.outcome, f.message)));
+  $("why").replaceChildren(...result.findings.map((f) => el("li", f.outcome, f.message)));
   $("invoiceTotal").textContent = result.amount_known === false ? "Not readable" : rupees(result.total);
   $("deducted").textContent = rupees(result.deducted);
   $("held").textContent = result.amount_known === false ? "Whole invoice" : rupees(result.held);
@@ -357,8 +361,7 @@ async function showEntry(id) {
     const body = el("div", "entry-body");
     body.append(el("p", `entry-outcome ${result.outcome}`, LABEL[result.outcome]), el("p", "entry-title", `${title}, ${source.toLowerCase()}`));
     const reasons = el("ul", "entry-why");
-    const found = result.findings.filter((f) => f.outcome !== "APPROVED");
-    reasons.append(...(found.length ? found : [{ outcome: "PASS", message: "Every check passed." }]).map((f) => el("li", f.outcome, f.message)));
+    reasons.append(...(result.findings.length ? result.findings : [{ outcome: "PASS", message: "Every check passed." }]).map((f) => el("li", f.outcome, f.message)));
     const figures = el("dl", "bridge");
     for (const [label, value] of [["Invoice total", result.amount_known === false ? "Not readable" : rupees(result.total)], ["To pay", rupees(result.payable)], ["Held", result.amount_known === false ? "Whole invoice" : rupees(result.held)]]) {
       const cell = el("div");
@@ -407,7 +410,7 @@ function drawLab() {
     const result = el("td");
     result.append(el("span", "pill", row.passed ? "Passed" : "Failed"));
     if (!row.passed) result.append(el("small", "lab-problem", row.problems.join("; ")));
-    tr.append(el("td", "", row.id), el("td", "", row.name ? `${row.title}: ${row.name}` : row.title), el("td", "", row.group === "technical" ? "Technical" : row.group === "business" ? "Business" : "Happy path"), expected, el("td", "", row.real_ai ? "Yes" : "No"), result);
+    tr.append(el("td", "", row.id), el("td", "", row.name ? `${row.title}: ${row.name}` : row.title), el("td", "", row.group === "technical" ? "Technical" : row.group === "business" ? "Business" : "Happy path"), expected, el("td", "", row.real_run), result);
     return tr;
   }));
 }
@@ -472,7 +475,9 @@ function wire() {
 }
 
 async function start() {
-  desk = await (await fetch("/api/desk")).json();
+  const response = await fetch("/api/desk");
+  if (response.status === 401) return location.replace("/login.html");
+  desk = await response.json();
   $("buyer").textContent = desk.buyer;
   $("deskDate").textContent = deskDate(desk.as_of);
   $("model").textContent = desk.model;

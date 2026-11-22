@@ -387,10 +387,11 @@ def verify(r):
             r.add("HOLD", reason, f"The {label} is missing.", stop=True)
     if r.stop:
         return None
-    values = [x["invoice_number"], x["buyer_gstin"], x["bank_account"], x["ifsc"], *x["po_numbers"]] + [v for v in (x["vendor_gstin"], x["irn"]) if v]
+    # Overseas invoices have no GSTIN and show a SWIFT code, which identify() checks against the vendor record.
+    values = [x["invoice_number"], x["buyer_gstin"], x["bank_account"], *x["po_numbers"]] + [v for v in (x["vendor_gstin"], x["irn"]) if v] + ([x["ifsc"]] if x["ifsc"] or x["vendor_gstin"] else [])
     amounts = [x["taxable_value"], x["total"]] + [x[k] for k in ("cgst", "sgst", "igst") if x[k]] + [l["amount"] for l in x["line_items"]]
     # Whole-token match: a dropped digit must not pass because it is a substring of the real number.
-    absent = [str(v) for v in values if not v or not re.search(rf"(?<![A-Z0-9/-]){re.escape(str(v).upper())}(?![A-Z0-9/-])", page)]
+    absent = [str(v) if v else "a required ID or bank field" for v in values if not v or not re.search(rf"(?<![A-Z0-9/-]){re.escape(str(v).upper())}(?![A-Z0-9/-])", page)]
     absent += [str(a) for a in amounts if a is None or not re.search(rf"(?<![\d,.]){re.escape(inr(a))}(?![\d,])", page)]
     if absent and not r.scan:
         return r.add("HOLD", "unverified_value", "These values were not found on the document: " + ", ".join(absent), stop=True)
@@ -459,6 +460,8 @@ def identify(r):
             r.add("BLOCKED", "lookalike_vendor", f"The GSTIN belongs to {r.vendor['name']}, but the invoice names {x['vendor_name']}.")
     if r.sender and r.sender.rsplit("@", 1)[-1].lower() != r.vendor["email_domain"]:
         r.add("BLOCKED", "lookalike_vendor", f"The sender domain does not match {r.vendor['email_domain']}.")
+    if not x["ifsc"] and not r.vendor["gstin"] and r.vendor["ifsc"].upper() in r.text.upper():
+        x["ifsc"] = r.vendor["ifsc"]
     if (x["bank_account"], x["ifsc"]) != (r.vendor["bank_account"], r.vendor["ifsc"]):
         verified = any(b["vendor"] == r.vendor_id and (b["new_account"], b["new_ifsc"]) == (x["bank_account"], x["ifsc"]) for b in master["bank_changes"])
         if verified:
@@ -578,8 +581,12 @@ def match(r):
         po, po_line = hit
         rate = round(line["rate"] / 1.18, 3) if x["tax_inclusive"] else line["rate"]
         rate_ok = abs(rate - po_line["rate"]) <= po_line["rate"] * tolerance
+        close = rate_ok and abs(rate - po_line["rate"]) >= 0.01
         if not rate_ok:
             r.add("HOLD", "line_mismatch", f"{line['description']}: rate {rate} differs from PO rate {po_line['rate']}.")
+        elif close:
+            extra = round((rate - po_line["rate"]) * line["quantity"] * (x["total"] / x["taxable_value"] if x["taxable_value"] else 1), 2)
+            r.add("APPROVED", "price_within_tolerance", f"{line['description']}: rate Rs {inr(rate)} against PO Rs {inr(po_line['rate'])}, within the {tolerance * 100:g}% tolerance. Rs {inr(abs(extra))} {'more' if extra > 0 else 'less'} including GST.")
         billed = sum(l["quantity"] for p in prior if po["po"] in p["po_numbers"] for l in p["lines"] if l["hsn"] == po_line["hsn"]) + this_invoice.get(po_line["sku"], 0)
         running_total = billed + line["quantity"]
         this_invoice[po_line["sku"]] = this_invoice.get(po_line["sku"], 0) + line["quantity"]
@@ -589,7 +596,7 @@ def match(r):
         accepted = sum(l["accepted"] for g in receipts for l in g["lines"] if l["sku"] == po_line["sku"])
         received = sum(l["received"] for g in receipts for l in g["lines"] if l["sku"] == po_line["sku"])
         failed_qc = received > accepted
-        status = "Rate differs" if not rate_ok else "Over PO" if running_total > po_line["qty"] else "No receipt" if not receipts else ("Failed QC" if failed_qc else "Short receipt") if running_total > accepted else "Matched"
+        status = "Rate differs" if not rate_ok else "Over PO" if running_total > po_line["qty"] else "No receipt" if not receipts else ("Failed QC" if failed_qc else "Short receipt") if running_total > accepted else "Within tolerance" if close else "Matched"
         r.match_rows.append({"description": line["description"], "unit": po_line["unit"], "ordered": po_line["qty"], "accepted": accepted, "billed_before": billed, "invoiced": line["quantity"], "po_rate": po_line["rate"], "invoice_rate": rate, "status": status})
         if not receipts:
             r.add("HOLD", "awaiting_receipt", f"No goods receipt exists for {po['po']}.")
@@ -686,7 +693,7 @@ def draft(r):
     vendor = f"billing@{r.vendor['email_domain']}" if r.vendor else None
     if d["outcome"] in ("APPROVED", "PART_PAY"):
         money = f"Invoice total: Rs {inr(d['total'])}\nDeducted: Rs {inr(d['deducted'])}\nHeld: Rs {inr(d['held'])}\nTo pay: Rs {inr(d['payable'])}"
-        notes = f"\n\nNotes:\n{issues}" if issues else ""
+        notes = "\n\nNotes:\n" + "\n".join("- " + f["message"] for f in r.findings) if r.findings else ""
         return {"audience": d["approver"], "to": d["approver"], "subject": f"Approve Rs {inr(d['payable'])} for invoice {number}",
                 "body": f"Please review this payment for {(r.vendor or {}).get('name', 'the vendor')}.\n\n{money}{notes}\n\nNo money moves until you release it."}
     if d["outcome"] == "BLOCKED":
@@ -813,7 +820,7 @@ def process(path, sender=None, db=None, reader=bedrock_read, master=None, on_sta
                     r.result = {"file": r.path.name, **r.decision, "findings": r.findings, "ai": r.ai}
             new = r.findings[before:]
             status = max((f["outcome"] for f in new), key=SEVERITY.get, default="PASS")
-            r.stages.append({"stage": number, "name": name, "status": status if status != "APPROVED" else "PASS", "ms": round((time.perf_counter() - start) * 1000), "detail": next((f["message"] for f in new if f["outcome"] != "APPROVED"), detail or "")})
+            r.stages.append({"stage": number, "name": name, "status": status if status != "APPROVED" else "PASS", "ms": round((time.perf_counter() - start) * 1000), "detail": next((f["message"] for f in new if f["outcome"] != "APPROVED"), new[0]["message"] if new else detail or "")})
             publish(new)
     finally:
         if locked:

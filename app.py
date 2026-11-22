@@ -1,24 +1,30 @@
-"""Clearing Desk local app: python app.py, then open http://127.0.0.1:8765"""
+"""Clearing Desk app: python app.py, then open http://127.0.0.1:8765. Set DESK_PASSCODE to require sign-in."""
+import asyncio
+import hashlib
+import hmac
 import json
+import os
 import queue
 import sqlite3
 import threading
+import time
 import uuid
 from contextlib import closing
 from datetime import datetime, timezone
 from functools import lru_cache
+from http.cookies import CookieError, SimpleCookie
 from pathlib import Path
 from urllib.parse import unquote
 
 import pymupdf
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from pipeline import MAX_PAGE_SIDE, MODEL, PDF_LOCK, ROOT, STAGES, bedrock_read, connect, ink_free, process, record_receipts, saved_read, scenario_master, split_invoices, upright, words
-from test_scenarios import run_case
+from test_scenarios import SIMULATED_FAULTS, run_case
 
 # Test invoices use saved AI readings, so replaying them never spends an API call. Only a new upload can.
 READY = ("H01", "B01", "B02", "B06", "B07", "B17", "B18", "B19", "B20", "T07", "T08", "T09")
@@ -28,7 +34,44 @@ MAX_KEPT_UPLOADS = 30
 SCENARIOS = {s["id"]: s for s in json.loads((ROOT / "data" / "scenarios.json").read_text(encoding="utf-8"))}
 MASTER = json.loads((ROOT / "data" / "master.json").read_text(encoding="utf-8"))
 UPLOADS = {}
+PASSCODE = os.environ.get("DESK_PASSCODE", "")
+SESSION_SECONDS = 12 * 3600
+OPEN_PATHS = {"/login.html", "/app.css", "/rosette.svg", "/api/login", "/api/health"}
 app = FastAPI(title="Clearing Desk", docs_url=None, redoc_url=None)
+
+
+def session_value(expires):
+    key = hashlib.sha256(b"clearing-desk-session" + PASSCODE.encode()).digest()
+    return f"{expires}.{hmac.new(key, str(expires).encode(), hashlib.sha256).hexdigest()}"
+
+
+def signed_in(cookie_header):
+    try:
+        value = SimpleCookie(cookie_header)["desk"].value
+    except (KeyError, CookieError):
+        return False
+    expires = value.partition(".")[0]
+    return expires.isdigit() and int(expires) > time.time() and hmac.compare_digest(value, session_value(expires))
+
+
+class PasscodeGate:
+    """Protects every page and API on a public server. Without DESK_PASSCODE, as on a laptop, it does nothing."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not PASSCODE:
+            return await self.inner(scope, receive, send)
+        path = scope["path"]
+        cookie = dict(scope["headers"]).get(b"cookie", b"").decode("latin-1")
+        if ".." not in path and (path in OPEN_PATHS or path.startswith("/fonts/") or signed_in(cookie)):
+            return await self.inner(scope, receive, send)
+        blocked = JSONResponse({"detail": "Sign in first."}, 401) if path.startswith("/api/") else RedirectResponse("/login.html", 303)
+        await blocked(scope, receive, send)
+
+
+app.add_middleware(PasscodeGate)
 
 
 def open_ledger():
@@ -91,7 +134,23 @@ def tray_item(invoice_id):
 @app.get("/api/health")
 def health():
     with closing(sqlite3.connect(ROOT / "cache" / "readings.db")) as db:
-        return {"ok": True, "invoices": len(READY), "saved_readings": db.execute("select count(*) from readings").fetchone()[0]}
+        db.execute("select count(*) from readings").fetchone()
+    return {"ok": True}
+
+
+@app.post("/api/login")
+async def login(request: Request):
+    body = await request.body()
+    try:
+        code = json.loads(body).get("code", "") if len(body) < 500 else ""
+    except (ValueError, AttributeError):
+        code = ""
+    if not PASSCODE or not isinstance(code, str) or not hmac.compare_digest(code.encode(), PASSCODE.encode()):
+        await asyncio.sleep(1)  # Slows down guessing.
+        raise HTTPException(401, "That access code is not correct.")
+    response = JSONResponse({"ok": True})
+    response.set_cookie("desk", session_value(int(time.time()) + SESSION_SECONDS), max_age=SESSION_SECONDS, httponly=True, samesite="lax", secure=request.headers.get("x-forwarded-proto") == "https")
+    return response
 
 
 @app.get("/api/desk")
@@ -223,8 +282,19 @@ def reset_ledger():
     return {"ok": True}
 
 
+def real_run(scenario, case, report):
+    """The last real check for the current AI model, so changing the model resets this to Not run."""
+    label = scenario["id"] + (f" ({case['name']})" if case["name"] else "")
+    if any(step.get("fault") in SIMULATED_FAULTS for step in case["steps"]):
+        return "Simulated"
+    return "Not run" if label not in report else "Failed" if report[label] else "Passed"
+
+
 @app.get("/api/lab")
 def lab():
+    saved = ROOT / "output" / f"real_ai_{MODEL.replace(':', '_')}.json"
+    report = json.loads(saved.read_text(encoding="utf-8")) if saved.exists() else {}
+
     def stream():
         passed = total = 0
         for scenario in SCENARIOS.values():
@@ -237,7 +307,7 @@ def lab():
                 passed += not problems
                 expected = [e for step in case["steps"] for e in (step["expect"] if isinstance(step["expect"], list) else [step["expect"]])]
                 yield "data: " + json.dumps({"type": "case", "id": scenario["id"], "title": scenario["title"], "name": case["name"], "group": scenario["group"], "passed": not problems, "problems": problems,
-                                             "expected": [{"outcome": e["outcome"], "reason": e["reason"]} for e in expected], "real_ai": scenario["id"] in READY}) + "\n\n"
+                                             "expected": [{"outcome": e["outcome"], "reason": e["reason"]} for e in expected], "real_run": real_run(scenario, case, report)}) + "\n\n"
         yield "data: " + json.dumps({"type": "done", "passed": passed, "total": total}) + "\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-store"})

@@ -9,6 +9,7 @@ Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decisio
 .venv\Scripts\python pipeline.py data\invoices\H01.pdf --fresh --sender billing@kestrelpack.example
 .venv\Scripts\python test_pipeline.py
 .venv\Scripts\python test_scenarios.py    # every scenario, offline, no AI calls
+.venv\Scripts\python test_scenarios.py --real    # the same scenarios with the configured AI, reuses saved readings
 .venv\Scripts\python tools\build_test_data.py --check
 ```
 

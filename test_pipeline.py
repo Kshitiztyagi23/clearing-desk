@@ -66,10 +66,16 @@ for label, result, outcome, reason in (
     assert (result["outcome"], result["reason"]) == (outcome, reason), f"{label}: {result['outcome']} {result['reason']}"
     assert result["payable"] == 0, label
 
-locked = process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), saved_read)
-assert locked["reason"] == "ai_unavailable", "the UI's saved-only reader must never make a live call"
-
 master = json.loads((ROOT / "data/master.json").read_text(encoding="utf-8"))
+attempts, real_root, real_open = [], pipeline.ROOT, pipeline.urllib.request.urlopen
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as empty_cache:
+    try:
+        pipeline.ROOT, pipeline.urllib.request.urlopen = Path(empty_cache), lambda *a, **k: attempts.append(1)
+        locked = process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), saved_read, master)
+    finally:
+        pipeline.ROOT, pipeline.urllib.request.urlopen = real_root, real_open
+assert (locked["reason"], attempts) == ("ai_unavailable", []), "the UI's saved-only reader must never make a live call"
+
 for sid in ("B01", "B02", "B06", "B07"):
     case = scenarios[sid]["cases"][0]
     step = case["steps"][0]
@@ -174,6 +180,15 @@ def printed(x, sid, folder, name, state=master):
     return process(f"{folder}/{name}.pdf", scenarios[sid]["cases"][0]["steps"][0]["sender"], connect(":memory:"), reader_for(x), state)
 
 
+overseas = {**known("T25"), "ifsc": None}
+t25, t25_mail = ROOT / "data/invoices/T25.pdf", scenarios["T25"]["cases"][0]["steps"][0]["sender"]
+assert process(t25, t25_mail, connect(":memory:"), reader_for(overseas), master)["reason"] == "currency_mismatch", "an overseas invoice can show SWIFT instead of IFSC"
+other_swift = copy.deepcopy(master)
+other_swift["vendors"]["V008"]["ifsc"] = "SWIFT OTHERUS33"
+assert process(t25, t25_mail, connect(":memory:"), reader_for(overseas), other_swift)["reason"] == "bank_mismatch", "a SWIFT code that differs from the record must be blocked"
+assert run(changed(ifsc=None))["reason"] == "unverified_value", "a domestic invoice must still have an IFSC"
+
+
 def reply(text):
     return io.BytesIO(json.dumps({"output": {"message": {"content": [{"text": text}]}}, "usage": {}}).encode())
 
@@ -199,6 +214,16 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
     two_parts = [{**past, "invoice_number": "LF/26-27/0270", "date": "2026-10-11", "service_period": ["2026-10-01", "2026-10-10"]}, {**past, "invoice_number": "LF/26-27/0280", "date": "2026-11-01", "service_period": ["2026-10-21", "2026-10-31"]}]
     assert printed(known("B17"), "B17", folder, "overlap", scenario_master(master, {"history": two_parts}))["payable"] == 23600.0, "every overlapping service day must be held"
 
+    near = known("B07")
+    near["line_items"][0].update(rate=1005.0, amount=100500.0)
+    near.update(taxable_value=100500.0, cgst=9045.0, sgst=9045.0, total=118590.0, amount_in_words=None)
+    within = printed(near, "B07", folder, "near")
+    assert (within["outcome"], within["reason"], "590.00" in within["message"]) == ("APPROVED", "price_within_tolerance", True), "a close price must be approved with its difference explained"
+    above = known("B07")
+    above["line_items"][0].update(rate=1010.5, amount=101050.0)
+    above.update(taxable_value=101050.0, cgst=9094.5, sgst=9094.5, total=119239.0, amount_in_words=None)
+    assert printed(above, "B07", folder, "above")["reason"] == "line_mismatch", "a price beyond tolerance must be held"
+
     real_root, real_open, calls = pipeline.ROOT, pipeline.urllib.request.urlopen, []
     try:
         pipeline.ROOT = Path(folder)
@@ -223,4 +248,35 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
     finally:
         pipeline.ROOT, pipeline.urllib.request.urlopen = real_root, real_open
 
-print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, backup reader, money rules, and 13 failure cases passed, 0 AI calls")
+import asyncio  # noqa: E402
+
+import app  # noqa: E402
+
+
+def gate_status(path, cookie=""):
+    sent, reached = [], []
+
+    async def inner(_scope, _receive, _send):
+        reached.append(path)
+
+    async def send(message):
+        sent.append(message)
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+    scope = {"type": "http", "method": "GET", "path": path, "raw_path": path.encode(), "query_string": b"", "root_path": "", "scheme": "http", "server": ("test", 80), "headers": [(b"cookie", cookie.encode())]}
+    asyncio.run(app.PasscodeGate(inner)(scope, receive, send))
+    return "open" if reached else sent[0]["status"]
+
+
+real_code, app.PASSCODE = app.PASSCODE, "test-only-code"
+try:
+    good_cookie = "desk=" + app.session_value(int(time.time()) + 60)
+    expired_cookie = "desk=" + app.session_value(int(time.time()) - 60)
+    assert (gate_status("/api/desk"), gate_status("/"), gate_status("/login.html"), gate_status("/api/health")) == (401, 303, "open", "open"), "only sign-in files may be public"
+    assert gate_status("/api/desk", good_cookie) == "open" and gate_status("/api/desk", expired_cookie) == 401 and gate_status("/api/desk", good_cookie[:-1] + "x") == 401, "only a valid, unexpired session may enter"
+    assert gate_status("/fonts/../index.html") == 303, "a path trick must not skip sign-in"
+finally:
+    app.PASSCODE = real_code
+
+print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, backup reader, money rules, sign-in, and 13 failure cases passed, 0 AI calls")
