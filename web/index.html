@@ -4,37 +4,48 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#e7eaf3">
+  <link rel="icon" href="data:,">
   <title>Clearing Desk</title>
   <link rel="preload" href="/fonts/hanken-grotesk.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bodoni-moda.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-  <a class="skip" href="#runButton">Skip to the in-tray</a>
+  <a class="skip" href="#content">Skip to content</a>
   <svg class="defs" aria-hidden="true">
     <filter id="ink"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="grain"/><feColorMatrix in="grain" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.7 1.65" result="holes"/><feComposite in="SourceGraphic" in2="holes" operator="in"/></filter>
   </svg>
 
   <header class="masthead">
     <div class="brand"><h1>Clearing Desk</h1><span id="buyer">Accounts payable</span></div>
+    <nav class="views" aria-label="Views">
+      <a href="?view=desk" data-view="desk">Live desk</a>
+      <a href="?view=ledger" data-view="ledger">Ledger</a>
+      <a href="?view=lab" data-view="lab">Test lab</a>
+    </nav>
     <dl class="facts">
       <div><dt>Demo date</dt><dd id="deskDate">-</dd></div>
-      <div><dt>Read by</dt><dd id="model">-</dd></div>
-      <div><dt>AI use</dt><dd>Saved readings, no paid calls</dd></div>
+      <div><dt>AI</dt><dd id="model">-</dd></div>
     </dl>
   </header>
 
-  <main class="grid">
+  <div id="content" tabindex="-1">
+  <main class="grid" id="deskView">
     <aside class="tray" aria-label="In-tray">
       <h2>In-tray</h2>
+      <div class="upload" id="dropZone">
+        <label class="choose">Add an invoice PDF<input id="fileInput" type="file" accept="application/pdf,.pdf"></label>
+        <label class="sender">Sender email, optional<input id="senderInput" name="sender" type="email" autocomplete="off" spellcheck="false" placeholder="billing@vendor.example…"></label>
+        <p id="uploadNote" role="status">A new file uses 1 AI call when cleared, or 2 if it is a scan.</p>
+      </div>
       <div id="tray"></div>
       <button id="runButton" class="run" type="button">Clear this invoice</button>
-      <p class="locked" id="locked"></p>
     </aside>
 
     <section class="desk" aria-label="Invoice on the desk">
       <div class="paper" id="paper">
         <img id="invoice" alt="Vendor invoice" width="680" height="962" fetchpriority="high">
+        <p class="no-preview" id="noPreview" hidden>This file cannot be previewed. Clear it to see why.</p>
         <div id="marks"></div>
         <div id="stamp" class="stamp" role="status" aria-live="polite"></div>
       </div>
@@ -65,9 +76,55 @@
           <div><dt>Held</dt><dd id="held">-</dd></div>
         </dl>
         <p class="next" id="nextStep">A person releases every payment.</p>
+        <button class="recheck" id="recheckButton" type="button" hidden>Record goods receipt and recheck</button>
+        <details class="draft" id="draftBox" hidden>
+          <summary id="draftLabel">Draft message</summary>
+          <dl><div><dt>To</dt><dd id="draftTo"></dd></div><div><dt>Subject</dt><dd id="draftSubject"></dd></div></dl>
+          <pre id="draftBody"></pre>
+          <button id="copyDraft" type="button">Copy draft</button>
+        </details>
       </section>
     </aside>
   </main>
+
+  <main class="book" id="ledgerView" hidden>
+    <section class="book-main" aria-labelledby="ledgerTitle">
+      <header class="page-head">
+        <div><h2 id="ledgerTitle">Ledger</h2><p>Every invoice cleared on this desk, with its decision and money.</p></div>
+        <button class="quiet" id="resetLedger" type="button">Clear history</button>
+      </header>
+      <section class="flow" aria-labelledby="flowTitle">
+        <h3 id="flowTitle">Where the money went</h3>
+        <div class="flow-bar" id="flowBar"></div>
+        <ul class="flow-key" id="flowKey"></ul>
+        <p class="flow-note" id="flowNote" hidden></p>
+      </section>
+      <div class="filters" id="filters" role="group" aria-label="Filter by decision"></div>
+      <div class="table-wrap ledger-wrap">
+        <table class="ledger">
+          <thead><tr><th>Invoice</th><th>Vendor</th><th>Decision</th><th>Why</th><th>Total</th><th>To pay</th><th>Held</th><th>When</th></tr></thead>
+          <tbody id="ledgerRows"></tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="slip entry" id="entryPanel" aria-label="Selected invoice" hidden></aside>
+  </main>
+
+  <main class="lab" id="labView" hidden>
+    <header class="page-head">
+      <div><h2>Test lab</h2><p>Runs every test case through the real rules using known-correct readings, so it checks the rules and makes no AI calls.</p></div>
+      <button class="run lab-run" id="runLab" type="button">Run all test cases</button>
+    </header>
+    <p class="lab-score" id="labScore" role="status">Not run yet.</p>
+    <div class="filters" id="labFilters" role="group" aria-label="Filter test cases"></div>
+    <div class="table-wrap ledger-wrap">
+      <table class="ledger lab-table">
+        <thead><tr><th>Case</th><th>What it tests</th><th>Type</th><th>Expected decision</th><th>Real AI run</th><th>Result</th></tr></thead>
+        <tbody id="labRows"></tbody>
+      </table>
+    </div>
+  </main>
+  </div>
   <script src="/app.js"></script>
 </body>
 </html>

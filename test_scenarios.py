@@ -8,7 +8,6 @@ from pathlib import Path
 
 from pipeline import ROOT, connect, process_file, record_receipts, scenario_master
 
-WAITING = {}
 # These scans stop before any AI call, so their amount is deliberately unknown.
 UNREADABLE = {"T08.pdf", "T09.pdf"}
 EXTRA = ("supersedes", "combined_total", "route_to", "suggested_po")
@@ -98,7 +97,7 @@ def run_case(case):
                 if len(got) != len(wants):
                     problems.append(f"{len(got)} results, expected {len(wants)}")
                 problems += [p for g, w in zip(got, wants) for p in compare(g, w, step["file"])]
-                if "ledger_entries" in step["expect"] if isinstance(step["expect"], dict) else False:
+                if isinstance(step["expect"], dict) and "ledger_entries" in step["expect"]:
                     entries = ledger.execute("select count(*) from runs").fetchone()[0]
                     if entries != step["expect"]["ledger_entries"]:
                         problems.append(f"ledger has {entries} entries")
@@ -110,23 +109,24 @@ def run_case(case):
         return problems
 
 
-passed, failed, waiting = 0, [], []
-for scenario in scenarios:
-    for case in scenario["cases"]:
-        label = scenario["id"] + (f" ({case['name']})" if case["name"] else "")
-        try:
-            problems = run_case(case)
-        except Exception as exc:
-            problems = [f"crashed: {type(exc).__name__}: {exc}"]
-        if not problems:
-            passed += 1
-        elif scenario["id"] in WAITING:
-            waiting.append(f"{label}: {WAITING[scenario['id']]}")
-        else:
-            failed.append(f"{label} {scenario['title']}: " + "; ".join(problems))
+def main():
+    passed, failed = 0, []
+    for scenario in scenarios:
+        for case in scenario["cases"]:
+            label = scenario["id"] + (f" ({case['name']})" if case["name"] else "")
+            try:
+                problems = run_case(case)
+            except Exception as exc:
+                problems = [f"crashed: {type(exc).__name__}: {exc}"]
+            if problems:
+                failed.append(f"{label} {scenario['title']}: " + "; ".join(problems))
+            else:
+                passed += 1
+    print(f"{passed} of {passed + len(failed)} test cases passed, {len(failed)} failed, 0 AI calls")
+    for line in failed:
+        print("  " + line)
+    return 1 if failed else 0
 
-total = passed + len(failed) + len(waiting)
-print(f"{passed} of {total} test cases passed, {len(waiting)} waiting, {len(failed)} failed, 0 AI calls")
-for line in waiting + failed:
-    print("  " + line)
-sys.exit(1 if failed else 0)
+
+if __name__ == "__main__":
+    sys.exit(main())

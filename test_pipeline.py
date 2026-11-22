@@ -1,7 +1,15 @@
 """Offline check of the happy path and its safety rails. Makes no AI calls: python test_pipeline.py"""
 import copy
+import io
 import json
+import tempfile
+import threading
+import time
+from pathlib import Path
 
+import pymupdf
+
+import pipeline
 from pipeline import ROOT, connect, process, saved_read, scenario_master
 
 scenarios = {s["id"]: s for s in json.loads((ROOT / "data/scenarios.json").read_text(encoding="utf-8"))}
@@ -107,4 +115,112 @@ assert two_readers(reader_for(scan), misread)["outcome"] == "APPROVED" and two_r
 assert two_readers(reader_for({**scan, "ifsc": "EXMP0001235"}))["reason"] == "low_confidence", "two valid but different IFSCs must be held"
 assert two_readers(reader_for({**scan, "invoice_number": "KP/26/27/1042-A"}))["outcome"] == "APPROVED", "a changed separator is not a disagreement"
 
-print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, and 13 failure cases passed, 0 AI calls")
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+    made = pymupdf.open()
+    made.new_page(width=5000, height=5000).insert_text((50, 80), "TAX INVOICE")
+    made.save(f"{folder}/giant.pdf")
+    made.close()
+    giant = process(f"{folder}/giant.pdf", sender, connect(":memory:"), broken)
+    assert (giant["outcome"], giant["reason"]) == ("RETURNED", "unreadable_file"), "an oversized page must be refused before it is rendered"
+    made = pymupdf.open()
+    made.new_page().insert_text((50, 80), "TAX INVOICE")
+    made.save(f"{folder}/thin.pdf")
+    made.close()
+    thin = process(f"{folder}/thin.pdf", sender, connect(":memory:"), broken)
+    assert (thin["outcome"], thin["reason"], "almost no readable" in thin["message"]) == ("HOLD", "low_confidence", True), "a nearly empty page must be held with a clear reason"
+
+real_read, used = pipeline.read_with, []
+
+
+def main_denied(run, model, live, slot):
+    used.append(model)
+    if model == pipeline.MODEL:
+        raise RuntimeError("Bedrock denied the request (HTTP 403).")
+    run.ai = {"source": "saved reading", "model": model, "paid_calls": 0}
+    return copy.deepcopy(good)
+
+
+def main_junk(run, model, live, slot):
+    used.append(model)
+    raise ValueError("AI response had no JSON")
+
+
+try:
+    pipeline.read_with = main_denied
+    backed_up = process(pdf, sender, connect(":memory:"), pipeline.bedrock_read)
+    assert backed_up["outcome"] == "APPROVED" and backed_up["ai"]["backup"] and used == [pipeline.MODEL, pipeline.BACKUP_MODEL], "Nova must get exactly one attempt after a denial"
+    used.clear()
+    pipeline.read_with = main_junk
+    junk = process(pdf, sender, connect(":memory:"), pipeline.bedrock_read)
+    assert junk["reason"] == "ai_output_invalid" and used == [pipeline.MODEL], "bad output must be held, not sent to another paid model"
+finally:
+    pipeline.read_with = real_read
+
+def known(sid):
+    return {**copy.deepcopy(scenarios[sid]["cases"][0]["steps"][0]["truth"]), "place_of_supply": "Maharashtra", "suspicious_instructions": False}
+
+
+def printed(x, sid, folder, name, state=master):
+    """Clears a small PDF that prints exactly what the reading says, so only the money rules can stop it."""
+    rows = ["TAX INVOICE printed for a money rule test, with enough visible text to count as a digital PDF document", f"Invoice {x['invoice_number']} Date {'-'.join(reversed(x['invoice_date'].split('-')))}",
+            f"GSTIN {x['vendor_gstin']} Buyer {x['buyer_gstin']}", f"Bank {x['bank_account']} IFSC {x['ifsc']}", "PO " + " ".join(x["po_numbers"]), f"IRN {x['irn']}"]
+    rows += [f"{l['description']} {pipeline.inr(l['amount'])}" for l in x["line_items"]] + [pipeline.inr(x[k]) for k in ("taxable_value", "cgst", "sgst", "total")]
+    made = pymupdf.open()
+    page = made.new_page()
+    for i, row in enumerate(rows):
+        page.insert_text((30, 40 + i * 14), row, fontsize=7)
+    made.save(f"{folder}/{name}.pdf")
+    made.close()
+    return process(f"{folder}/{name}.pdf", scenarios[sid]["cases"][0]["steps"][0]["sender"], connect(":memory:"), reader_for(x), state)
+
+
+def reply(text):
+    return io.BytesIO(json.dumps({"output": {"message": {"content": [{"text": text}]}}, "usage": {}}).encode())
+
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+    x = known("B07")
+    x["line_items"][0]["amount"] = 120000.0
+    x.update(taxable_value=120000.0, cgst=10800.0, sgst=10800.0, total=141600.0, amount_in_words=None)
+    assert printed(x, "B07", folder, "inflated")["reason"] == "arithmetic_mismatch", "quantity times rate must equal the line amount"
+    x = known("B07")
+    x["line_items"][0].update(quantity=-100, amount=-100000.0)
+    x.update(taxable_value=-100000.0, cgst=-9000.0, sgst=-9000.0, total=-118000.0, amount_in_words=None)
+    negative = printed(x, "B07", folder, "negative")
+    assert (negative["outcome"], negative["payable"], negative["held"]) == ("HOLD", 0, 0), "a negative invoice must never be approved"
+    x = known("B06")
+    x["line_items"] = [{**x["line_items"][0], "quantity": 600, "amount": 60000.0} for _ in range(2)]
+    x.update(taxable_value=120000.0, cgst=10800.0, sgst=10800.0, total=141600.0, amount_in_words=None)
+    assert printed(x, "B06", folder, "split")["reason"] == "po_overrun", "two lines for one PO item must add up"
+    x = known("B07")
+    x["amount_in_words"] = "Rupees One Lakh Eighteen Thousand Five Only"
+    assert printed(x, "B07", folder, "words", scenario_master(master, {"receipts": {"PO-2026-00520": {"520-1": [100, 100]}}}))["reason"] == "amount_words_conflict", "extra words must count as a conflict"
+    past = scenarios["B17"]["cases"][0]["setup"]["history"][0]
+    two_parts = [{**past, "invoice_number": "LF/26-27/0270", "date": "2026-10-11", "service_period": ["2026-10-01", "2026-10-10"]}, {**past, "invoice_number": "LF/26-27/0280", "date": "2026-11-01", "service_period": ["2026-10-21", "2026-10-31"]}]
+    assert printed(known("B17"), "B17", folder, "overlap", scenario_master(master, {"history": two_parts}))["payable"] == 23600.0, "every overlapping service day must be held"
+
+    real_root, real_open, calls = pipeline.ROOT, pipeline.urllib.request.urlopen, []
+    try:
+        pipeline.ROOT = Path(folder)
+        replies = [reply("I cannot read this"), reply(json.dumps(good))]
+        pipeline.urllib.request.urlopen = lambda *_a, **_k: replies.pop(0)
+        assert process(pdf, sender, connect(":memory:"), pipeline.bedrock_read, master)["reason"] == "ai_output_invalid"
+        assert process(pdf, sender, connect(":memory:"), pipeline.bedrock_read, master)["outcome"] == "APPROVED", "a bad AI reply must not be saved"
+        (pipeline.ROOT / "cache" / "readings.db").unlink()
+
+        def slow(*_a, **_k):
+            calls.append(1)
+            time.sleep(.2)
+            return reply(json.dumps(good))
+        pipeline.urllib.request.urlopen = slow
+        both = []
+        threads = [threading.Thread(target=lambda: both.append(process(pdf, sender, connect(":memory:"), pipeline.bedrock_read, master)["outcome"])) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        assert (len(calls), both) == (1, ["APPROVED", "APPROVED"]), "clearing one new invoice twice at once must make one paid call"
+    finally:
+        pipeline.ROOT, pipeline.urllib.request.urlopen = real_root, real_open
+
+print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, backup reader, money rules, and 13 failure cases passed, 0 AI calls")

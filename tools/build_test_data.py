@@ -14,7 +14,6 @@ from datetime import date
 from pathlib import Path
 
 import pymupdf
-from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -234,6 +233,7 @@ def render(doc, s):
 
 
 def to_scan(src, dpi=150, angle=1.2, blur=0.6, noise=0.06, quality=55, turn=0):
+    from PIL import Image, ImageFilter  # Only regenerating the scans needs Pillow, so the app does not install it.
     out = pymupdf.open()
     rng = random.Random(7)
     for page in src:

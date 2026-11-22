@@ -2,7 +2,7 @@
 
 Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decision: approve, part-pay, hold, or block. Each stage and the evidence behind the decision stay visible.
 
-**Status:** the local Live Desk runs 12 invoices, including fraud, duplicates, part-payments, and damaged scans. All 61 test cases pass offline. The Ledger, Test Lab, and deployment are still in progress. See [the process map](docs/PROCESS.md).
+**Status:** the local app has a Live Desk with 12 ready invoices and PDF upload, a Ledger of every run, and a Test Lab. All 61 test cases pass offline. Deployment is still to come. See [the process map](docs/PROCESS.md).
 
 ```powershell
 .venv\Scripts\python app.py    # then open http://127.0.0.1:8765
@@ -16,7 +16,7 @@ Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decisio
 
 | Area | Choice | Reason |
 |---|---|---|
-| AI | Amazon Nova 2 Lite on Bedrock for reading invoices only | Read 16 of 17 test fields from a degraded scan in 3.5 seconds |
+| AI | Claude Opus 5.5 on Bedrock for reading invoices only, with Amazon Nova 2 Lite as the backup | Opus read every checked field correctly on a clean invoice and a rotated scan that Nova misread |
 | Decisions | Plain-code rules | The same invoice always gets the same, explainable result |
 | App | Python, FastAPI, SQLite, plain HTML/CSS/JS | Few moving parts during a live demo |
 | PDF | PyMuPDF for text, positions, and page images | One library covers all three |

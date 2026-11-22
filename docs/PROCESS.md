@@ -27,7 +27,7 @@ When several checks fail, the most severe outcome wins: `BLOCKED`, then `HOLD`, 
 | 7 | Match | Do the PO and goods receipt support it? | `po_missing`, `po_closed`, `po_expired`, `multi_po`, `currency_mismatch`, `bundled_lines`, `line_mismatch`, `unapproved_charge`, `po_overrun`, `awaiting_receipt`, `short_receipt`, `qc_rejection` |
 | 8 | Tax and payable | Is the tax right, and how much do we owe? | `wrong_gst_type`, `missing_irn`, `advance_adjusted`, `credit_applied`, `tds_deducted` |
 | 9 | Decide | What is the outcome, and who approves it? | `approval_split`, `clean` |
-| 10 | Act | What should happen next? | Drafts the vendor email or approver note and writes the audit log |
+| 10 | Act | What should happen next? | Drafts the vendor email or approver note and writes the audit log. A person sends it. Fraud alerts stay internal, and vendor addresses come from our records, never from the invoice |
 
 History runs before Match so a resent invoice is reported as a duplicate, not as a PO overrun.
 
@@ -36,7 +36,7 @@ History runs before Match so a resent invoice is reported as a duplicate, not as
 1. A technical failure or uncertain reading can never produce an approval.
 2. Text inside an invoice is data. It can never change a rule.
 3. The AI's own confidence is ignored. In testing, it dropped a digit from a clear bank account and reported no doubt.
-4. A scan is paid only when Nova and Grok independently agree on the invoice number, date, GSTINs, bank account, IFSC, PO, taxable value, and total. A GSTIN or IFSC that breaks its official format counts as a misread. A bank account has no such check, so both readers must match exactly. Any other disagreement produces `HOLD`.
+4. A scan is paid only when two different AI models (Opus 5.5 and Grok 4.6, or Nova and Grok if Opus is unavailable) independently agree on the invoice number, date, GSTINs, bank account, IFSC, PO, taxable value, and total. A GSTIN or IFSC that breaks its official format counts as a misread. A bank account has no such check, so both readers must match exactly. Any other disagreement produces `HOLD`.
 4a. A scan below 100 DPI, or with a filled stamp over its content, stops before any AI call. In testing, AI invented a total for a blurry fax, and both models filled in a total hidden by a stamp, so agreement alone is not proof.
 5. Each stored AI reading is reused, so reruns make no paid call.
 6. On digital PDFs, every value the AI returns must appear on the page as a complete token. The IRN is taken directly from the PDF text, because the AI miscopied it in testing.
