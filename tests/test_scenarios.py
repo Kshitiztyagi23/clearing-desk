@@ -1,7 +1,7 @@
 """Runs every test scenario.
 
-python test_scenarios.py         offline with known-correct readings, no AI calls
-python test_scenarios.py --real  with the configured AI models, saved readings are reused and it stops at the first access error
+python tests/test_scenarios.py         offline with known-correct readings, no AI calls
+python tests/test_scenarios.py --real  with the configured AI models, saved readings are reused and it stops at the first access error
 """
 import copy
 import json
@@ -10,6 +10,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # The app modules live in the repo root.
 import pipeline
 from pipeline import ROOT, connect, process_file, record_receipts, scenario_master
 

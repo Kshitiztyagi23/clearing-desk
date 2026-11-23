@@ -54,6 +54,8 @@ History runs before Match so a resent invoice is reported as a duplicate, not as
 
 ## Standards used
 
+- [CBIC invoice rules](https://cbic-gst.gov.in/gst-invoice-rules.html): tax invoice particulars
+- [python-stdnum GSTIN check](https://sources.debian.org/src/python-stdnum/2.2-1/stdnum/in_/gstin.py): GSTIN check digit (Luhn mod 36)
 - [CGST Rule 46](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/rules/cgst_rules/active/chapter6/rule46_v1.00.html): invoice particulars, and invoice numbers of up to 16 characters
 - [Notification 78/2020](https://www.gstcouncil.gov.in/sites/default/files/2024-05/notfctn-78-central-tax-english-2020.pdf): 4 HSN digits up to ₹5 crore turnover, 6 digits above it
 - [E-invoice schema 1.1](https://vasai.icai.org/detail/38865.aspx): 64-character IRN

@@ -1,39 +1,135 @@
 # Clearing Desk
 
-Clearing Desk takes a vendor invoice PDF and returns an accounts-payable decision: approve, part-pay, hold, or block. Each stage and the evidence behind the decision stay visible.
+Clearing Desk turns a vendor invoice PDF into a payment decision that a finance team can check. It reads the invoice, verifies it, matches it to the purchase order and goods receipt, and explains what should happen to the money.
 
-**Status:** the local app has a Live Desk with 12 ready invoices and PDF upload, a Ledger of every run, and a Test Lab. All 61 test cases pass offline. Deployment is still to come. See [the process map](docs/PROCESS.md).
+**[Open the live demo](https://3.111.203.94)**. No login needed. All companies, invoices, and bank details are fictional.
 
-```powershell
-.venv\Scripts\python app.py    # then open http://127.0.0.1:8765
-.venv\Scripts\python pipeline.py data\invoices\H01.pdf --fresh --sender billing@kestrelpack.example
-.venv\Scripts\python test_pipeline.py
-.venv\Scripts\python test_scenarios.py    # every scenario, offline, no AI calls
-.venv\Scripts\python test_scenarios.py --real    # the same scenarios with the configured AI, reuses saved readings
-.venv\Scripts\python tools\build_test_data.py --check
+Built for Zamp's AI Solutions Analyst case study, PS-1: *Invoice processing, from PDF to decision*.
+
+![Clearing Desk approving an invoice, with the ten stages, highlighted evidence, three-way match, and payment advice](docs/images/live-desk.png)
+
+## Try it in two minutes
+
+Open the [live demo](https://3.111.203.94), select an invoice in the In-tray, and click **Clear this invoice**.
+
+| Select | What to look for | Decision |
+|---|---|---|
+| **Clean invoice** | All ten stages pass, and the PO, goods receipt, and invoice agree | Approved, pay Rs 1,22,661 |
+| **Bank-detail fraud** | The invoice looks normal, but its bank details differ from the vendor record | Blocked, pay nothing |
+| **Slow PO overrun** | 680 units already billed plus 340 now exceeds the 1,000 ordered | Hold |
+| **Billed but not delivered** | The vendor billed 100 units, but only 80 were accepted | Part-pay Rs 94,400, hold Rs 23,600 |
+| **Stamp over a key figure** | A stamp hides the grand total, so the app stops before any AI call | Hold, ask for a clean copy |
+
+Then click any stage to see what it checked, open **Ledger** for history across runs, and open **Test lab** to run all 61 test cases.
+
+## How it works
+
+**AI reads. Plain rules decide. A person approves.**
+
+```mermaid
+flowchart LR
+    A[Invoice PDF] --> B[Intake and read]
+    B --> C[AI extracts fields]
+    C --> D[Verify against the PDF]
+    D --> E[Vendor and history checks]
+    E --> F[PO and goods receipt match]
+    F --> G[Tax and payable]
+    G --> H{Decision}
+    H --> I[Draft for a person to review]
 ```
 
-## Decisions
+The same reading always gets the same decision, because the decision is made by code and not by the AI. Each run shows its ten stages live and keeps a full audit trail.
 
-| Area | Choice | Reason |
+| Decision | Meaning | Money |
 |---|---|---|
-| AI | Claude Opus 5.5 on Bedrock for reading invoices only, with Amazon Nova 2 Lite as the backup | Opus read every checked field correctly on a clean invoice and a rotated scan that Nova misread |
-| Decisions | Plain-code rules | The same invoice always gets the same, explainable result |
-| App | Python, FastAPI, SQLite, plain HTML/CSS/JS | Few moving parts during a live demo |
-| PDF | PyMuPDF for text, positions, and page images | One library covers all three |
-| Scans | Grok 4.6 on Bedrock as an independent second reader | In testing, one AI dropped a digit from a clear bank account number and did not flag it |
-| Hosting | AWS EC2 `t4g.small`, Mumbai, 2 GB RAM, 20 GB disk | Runs on AWS Free plan credits, always on, and keeps run history |
+| **Approved** | Every check passed | Pay the payable amount, after any TDS |
+| **Part-pay** | Part of the invoice is valid | Pay the valid part, and hold or deduct the rest |
+| **Hold** | A person or the vendor must resolve something | Pay nothing yet |
+| **Blocked** | Likely fraud, tampering, or a certain duplicate | Pay nothing and escalate |
+| **Returned** | Not a payable invoice | Send it back or route it elsewhere |
 
-## Data standards
+The full stage-by-stage logic, reason codes, and assumptions are in the [process map](docs/PROCESS.md).
 
-Test vendors are fictional. Invoices follow Indian GST conventions.
+## Built to fail safely
 
-**Checked against sources**
+- **Uncertainty never becomes an approval.** An AI failure, unclear reading, or unexpected error holds the invoice.
+- **Invoice text is treated as data.** Instructions hidden in a document cannot change a rule.
+- **AI values are checked.** On digital PDFs, each value must appear on the page. On scans, two different AI models must agree on the critical fields.
+- **Bad scans stop early.** A blurry page or a stamp over the content stops before any AI call, because AI filled in hidden totals during testing.
+- **Nothing moves by itself.** The app drafts the next message, and a person sends it and releases the payment.
+- **The public demo has spending limits.** New AI reads are capped per day, and saved readings are reused at no cost.
 
-- Tax invoice particulars: [CBIC invoice rules](https://cbic-gst.gov.in/gst-invoice-rules.html)
-- E-invoice threshold of ₹5 crore and the 30-day reporting limit at ₹10 crore: [GSTN advisory](https://www.mahagst.gov.in/public/uploads/gstnadvisory/1760531580_293%20Advisory%20Time%20Limit%20for%20Reporting%20e%20Invoice%20on%20the%20IRP%20Portal%20%20Lowering%20of%20Threshold%20to%20AATO%2010%20Crores%20and%20Above.pdf)
-- GSTIN check digit (Luhn mod 36): [python-stdnum](https://sources.debian.org/src/python-stdnum/2.2-1/stdnum/in_/gstin.py)
-- TDS of 10% on professional fees and 2% on technical services, above ₹50,000: [Section 393](https://www.incometaxindia.gov.in/w/section-393-6)
-- HSN of 4 digits up to ₹5 crore turnover and 6 digits above it: [Notification 78/2020](https://www.gstcouncil.gov.in/sites/default/files/2024-05/notfctn-78-central-tax-english-2020.pdf)
-- Invoice numbers of up to 16 characters: [CGST Rule 46](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/rules/cgst_rules/active/chapter6/rule46_v1.00.html)
-- E-invoice schema 1.1 with a 64-character IRN: [schema text](https://vasai.icai.org/detail/38865.aspx)
+<p>
+  <img src="docs/images/bank-fraud.png" alt="A bank-detail fraud invoice blocked, with the changed account highlighted" width="100%">
+</p>
+
+## Testing
+
+The suite has **61 test cases**: 1 happy path, 21 business scenarios, and 39 technical failures. They cover fraud, duplicates, split invoices, tax errors, broken PDFs, AI failures, and two invoices hitting one PO at the same time.
+
+All 61 pass with known-correct readings. 58 were also checked with real Claude Opus 5.5 readings, and the other 3 simulate AI failures on purpose.
+
+<p>
+  <img src="docs/images/ledger.png" alt="Ledger showing where the money went and a full audit trail" width="49%">
+  <img src="docs/images/test-lab.png" alt="Test lab showing 61 of 61 test cases passed" width="49%">
+</p>
+
+## Technical choices
+
+| Area | Choice | Why |
+|---|---|---|
+| Reading | Claude Opus 5.5 on Amazon Bedrock, with Nova 2 Lite as backup | Opus read the checked fields correctly on a rotated scan that Nova misread |
+| Scan check | Grok 4.6 as an independent second reader | One AI dropped a digit from a clear bank account during testing and did not flag it |
+| Decisions | Plain Python rules | Repeatable and explainable |
+| App | FastAPI, SQLite, plain HTML, CSS, and JavaScript | Few moving parts during a live demo |
+| PDF | PyMuPDF | Handles text, word positions, and page images |
+| Hosting | AWS EC2 in Mumbai with Caddy for HTTPS | Always on, and keeps run history |
+
+## Run it locally
+
+Requires Python 3.12 or newer.
+
+```bash
+git clone https://github.com/Kshitiztyagi23/clearing-desk.git
+cd clearing-desk
+python -m venv .venv
+.venv\Scripts\activate          # macOS or Linux: source .venv/bin/activate
+pip install -r requirements.txt
+python app.py                   # then open http://127.0.0.1:8765
+```
+
+Run the tests. Neither command makes an AI call.
+
+```bash
+python tests/test_pipeline.py
+python tests/test_scenarios.py
+```
+
+Saved AI readings are not stored in this repo, so the live demo is the easiest way to run the desk invoices. Locally, the Test lab works without a key. Reading a new upload needs `AWS_BEARER_TOKEN_BEDROCK`.
+
+## Project structure
+
+```text
+clearing-desk/
+├── app.py              Web server, live run stream, Ledger, and Test lab
+├── pipeline.py         The ten-stage process and all decision rules
+├── requirements.txt    Python dependencies
+├── data/
+│   ├── master.json     Fictional vendors, POs, and goods receipts
+│   ├── scenarios.json  All test cases and expected decisions
+│   └── invoices/       Generated test invoice PDFs
+├── docs/
+│   ├── PROCESS.md      Process map, rules, assumptions, and standards
+│   └── images/         README screenshots
+├── tests/              Safety checks and the scenario runner
+├── tools/              Test data generator
+└── web/                Interface
+```
+
+## Known limits
+
+- The GST registry is simulated. A production version would call a licensed GST service.
+- The tax check assumes 18% GST.
+- Credits and advances are applied but not yet marked as used.
+- White text hidden on a white page is not detected.
+- IRN is checked for presence and format only.

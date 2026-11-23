@@ -1,7 +1,8 @@
-"""Offline check of the happy path and its safety rails. Makes no AI calls: python test_pipeline.py"""
+"""Offline check of the happy path and its safety rails. Makes no AI calls: python tests/test_pipeline.py"""
 import copy
 import io
 import json
+import sys
 import tempfile
 import threading
 import time
@@ -9,6 +10,7 @@ from pathlib import Path
 
 import pymupdf
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # The app modules live in the repo root.
 import pipeline
 from pipeline import ROOT, connect, process, saved_read, scenario_master
 

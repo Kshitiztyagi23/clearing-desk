@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from pipeline import MAX_PAGE_SIDE, MODEL, PDF_LOCK, ROOT, STAGES, bedrock_read, connect, ink_free, process, record_receipts, saved_read, scenario_master, split_invoices, upright, words
-from test_scenarios import SIMULATED_FAULTS, run_case
+from tests.test_scenarios import SIMULATED_FAULTS, run_case
 
 # Test invoices use saved AI readings, so replaying them never spends an API call. Only a new upload can.
 READY = ("H01", "B01", "B02", "B06", "B07", "B17", "B18", "B19", "B20", "T07", "T08", "T09")
