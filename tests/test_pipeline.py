@@ -1,6 +1,5 @@
 """Offline check of the happy path and its safety rails. Makes no AI calls: python tests/test_pipeline.py"""
 import copy
-import io
 import json
 import sys
 import tempfile
@@ -69,13 +68,13 @@ for label, result, outcome, reason in (
     assert result["payable"] == 0, label
 
 master = json.loads((ROOT / "data/master.json").read_text(encoding="utf-8"))
-attempts, real_root, real_open = [], pipeline.ROOT, pipeline.urllib.request.urlopen
+attempts, real_root, real_call = [], pipeline.ROOT, pipeline.call_model
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as empty_cache:
     try:
-        pipeline.ROOT, pipeline.urllib.request.urlopen = Path(empty_cache), lambda *a, **k: attempts.append(1)
+        pipeline.ROOT, pipeline.call_model = Path(empty_cache), lambda *a: attempts.append(1)
         locked = process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), saved_read, master)
     finally:
-        pipeline.ROOT, pipeline.urllib.request.urlopen = real_root, real_open
+        pipeline.ROOT, pipeline.call_model = real_root, real_call
 assert (locked["reason"], attempts) == ("ai_unavailable", []), "the UI's saved-only reader must never make a live call"
 
 for sid in ("B01", "B02", "B06", "B07"):
@@ -142,10 +141,7 @@ real_read, used = pipeline.read_with, []
 
 def main_denied(run, model, live, slot):
     used.append(model)
-    if model == pipeline.MODEL:
-        raise RuntimeError("Bedrock denied the request (HTTP 403).")
-    run.ai = {"source": "saved reading", "model": model, "paid_calls": 0}
-    return copy.deepcopy(good)
+    raise RuntimeError("The Claude API refused the request (HTTP 403).")
 
 
 def main_junk(run, model, live, slot):
@@ -155,11 +151,11 @@ def main_junk(run, model, live, slot):
 
 try:
     pipeline.read_with = main_denied
-    backed_up = process(pdf, sender, connect(":memory:"), pipeline.bedrock_read)
-    assert backed_up["outcome"] == "APPROVED" and backed_up["ai"]["backup"] and used == [pipeline.MODEL, pipeline.BACKUP_MODEL], "Nova must get exactly one attempt after a denial"
+    denied = process(pdf, sender, connect(":memory:"), pipeline.ai_read)
+    assert (denied["reason"], denied["payable"], used) == ("ai_unavailable", 0, [pipeline.MODEL]), "a refused call must hold the invoice after one attempt"
     used.clear()
     pipeline.read_with = main_junk
-    junk = process(pdf, sender, connect(":memory:"), pipeline.bedrock_read)
+    junk = process(pdf, sender, connect(":memory:"), pipeline.ai_read)
     assert junk["reason"] == "ai_output_invalid" and used == [pipeline.MODEL], "bad output must be held, not sent to another paid model"
 finally:
     pipeline.read_with = real_read
@@ -192,7 +188,37 @@ assert run(changed(ifsc=None))["reason"] == "unverified_value", "a domestic invo
 
 
 def reply(text):
-    return io.BytesIO(json.dumps({"output": {"message": {"content": [{"text": text}]}}, "usage": {}}).encode())
+    return text, 1, 1
+
+
+class FakeClaude:
+    """Stands in for the Claude API client, so the real request settings are checked without a paid call."""
+    def __init__(self, stop, options):
+        self.stop, self.messages, seen[:] = stop, self, [options]
+
+    def create(self, **request):
+        seen.append(request)
+        block = type("Block", (), {"type": "text", "text": json.dumps(good)})()
+        return type("Reply", (), {"stop_reason": self.stop, "content": [block], "usage": type("Usage", (), {"input_tokens": 5, "output_tokens": 7})()})()
+
+
+real_client, real_key, seen = pipeline.anthropic.Anthropic, pipeline.api_key, []
+page = type("Run", (), {"image": b"jpeg", "text": "page"})()
+try:
+    pipeline.api_key = lambda: "test-only"
+    for stop in ("refusal", "max_tokens"):
+        pipeline.anthropic.Anthropic = lambda stop=stop, **options: FakeClaude(stop, options)
+        try:
+            pipeline.call_model(pipeline.MODEL, page)
+            raise AssertionError(f"a reply that stopped with {stop} must not be trusted")
+        except RuntimeError:
+            pass
+    pipeline.anthropic.Anthropic = lambda **options: FakeClaude("end_turn", options)
+    assert pipeline.call_model(pipeline.MODEL, page) == (json.dumps(good), 5, 7)
+    request = seen[1]
+    assert seen[0]["max_retries"] == 0 and request["model"] == pipeline.MODEL and request["messages"][0]["content"][0]["source"]["media_type"] == "image/jpeg", "a paid read must use the set model and never retry"
+finally:
+    pipeline.anthropic.Anthropic, pipeline.api_key = real_client, real_key
 
 
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
@@ -226,35 +252,35 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
     above.update(taxable_value=101050.0, cgst=9094.5, sgst=9094.5, total=119239.0, amount_in_words=None)
     assert printed(above, "B07", folder, "above")["reason"] == "line_mismatch", "a price beyond tolerance must be held"
 
-    real_root, real_open, real_key, calls = pipeline.ROOT, pipeline.urllib.request.urlopen, pipeline.bedrock_key, []
+    real_root, real_call, calls = pipeline.ROOT, pipeline.call_model, []
     try:
-        pipeline.ROOT, pipeline.bedrock_key = Path(folder), lambda: "test-only"
+        pipeline.ROOT = Path(folder)
         replies = [reply("I cannot read this"), reply(json.dumps(good))]
-        pipeline.urllib.request.urlopen = lambda *_a, **_k: replies.pop(0)
-        assert process(pdf, sender, connect(":memory:"), pipeline.bedrock_read, master)["reason"] == "ai_output_invalid"
-        assert process(pdf, sender, connect(":memory:"), pipeline.bedrock_read, master)["outcome"] == "APPROVED", "a bad AI reply must not be saved"
+        pipeline.call_model = lambda *_a: replies.pop(0)
+        assert process(pdf, sender, connect(":memory:"), pipeline.ai_read, master)["reason"] == "ai_output_invalid"
+        assert process(pdf, sender, connect(":memory:"), pipeline.ai_read, master)["outcome"] == "APPROVED", "a bad AI reply must not be saved"
         (pipeline.ROOT / "cache" / "readings.db").unlink()
 
-        def slow(*_a, **_k):
+        def slow(*_a):
             calls.append(1)
             time.sleep(.2)
             return reply(json.dumps(good))
-        pipeline.urllib.request.urlopen = slow
+        pipeline.call_model = slow
         both = []
-        threads = [threading.Thread(target=lambda: both.append(process(pdf, sender, connect(":memory:"), pipeline.bedrock_read, master)["outcome"])) for _ in range(2)]
+        threads = [threading.Thread(target=lambda: both.append(process(pdf, sender, connect(":memory:"), pipeline.ai_read, master)["outcome"])) for _ in range(2)]
         for thread in threads:
             thread.start()
         for thread in threads:
             thread.join()
         assert (len(calls), both) == (1, ["APPROVED", "APPROVED"]), "clearing one new invoice twice at once must make one paid call"
         pipeline.DAILY_AI_LIMIT, spent_before = 1, len(calls)
-        capped = process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), pipeline.bedrock_read, master)
-        assert (capped["reason"], capped["payable"], len(calls)) == ("ai_unavailable", 0, spent_before), "the daily limit must stop new paid calls, including the backup model"
+        capped = process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), pipeline.ai_read, master)
+        assert (capped["reason"], capped["payable"], len(calls)) == ("ai_unavailable", 0, spent_before), "the daily limit must stop new paid calls"
         pipeline.DAILY_LIMIT_FROM = pipeline.datetime.now(pipeline.timezone.utc).isoformat()
-        process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), pipeline.bedrock_read, master)
+        process(ROOT / "data/invoices/T22.pdf", sender, connect(":memory:"), pipeline.ai_read, master)
         assert len(calls) == spent_before + 1, "calls made before the site's limit started must not count"
     finally:
-        pipeline.ROOT, pipeline.urllib.request.urlopen, pipeline.bedrock_key, pipeline.DAILY_AI_LIMIT, pipeline.DAILY_LIMIT_FROM = real_root, real_open, real_key, 0, ""
+        pipeline.ROOT, pipeline.call_model, pipeline.DAILY_AI_LIMIT, pipeline.DAILY_LIMIT_FROM = real_root, real_call, 0, ""
 
 import app  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
@@ -270,4 +296,4 @@ try:
 finally:
     app.OWNER_CODE = real_owner
 
-print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, backup reader, money rules, public-site limits, and 13 failure cases passed, 0 AI calls")
+print("OK: happy path, 4 Day 4 scenarios, repeat order, same-day twin, two-reader checks, Claude API request, money rules, public-site limits, and 13 failure cases passed, 0 AI calls")

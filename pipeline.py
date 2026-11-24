@@ -15,24 +15,21 @@ import sqlite3
 import tempfile
 import threading
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+import anthropic
 import pymupdf
 
 ROOT = Path(__file__).resolve().parent
-MODEL = os.environ.get("BEDROCK_MODEL", "global.anthropic.claude-opus-5-5")
-SECOND_MODEL = os.environ.get("BEDROCK_SECOND_MODEL", "global.xai.grok-4.6")
-BACKUP_MODEL = "global.amazon.nova-2-lite-v1:0"
+MODEL = os.environ.get("AI_MODEL", "claude-haiku-5-5")  # The low-cost model reads every new invoice.
+SECOND_MODEL = os.environ.get("AI_SECOND_MODEL", "claude-sonnet-5-5")  # A different model double-checks scans only.
+SAVED_MODEL, SAVED_SECOND_MODEL = "global.anthropic.claude-opus-5-5", "global.xai.grok-4.6"  # Desk invoices replay readings saved from these.
 MIN_SCAN_DPI = 100
 MAX_PAGE_SIDE = 2000  # points, about 70 cm. One oversized page used 1.1 GB when rendered in stress testing.
 PDF_LOCK = threading.RLock()  # PyMuPDF is not thread-safe.
 CRITICAL = {"invoice_number": "invoice number", "invoice_date": "invoice date", "vendor_gstin": "vendor GSTIN", "buyer_gstin": "buyer GSTIN", "bank_account": "bank account", "ifsc": "IFSC",
             "po_numbers": "PO number", "taxable_value": "taxable value", "total": "grand total"}
-REGION = "ap-south-1"
 PROMPT_VERSION = "1"
 AI_CALL_LIMIT = 150
 DAILY_AI_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", 0))  # A public site sets this so visitors cannot run up the AI bill.
@@ -128,15 +125,33 @@ def clean_reading(raw):
     return r
 
 
-def bedrock_key():
-    key = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
+def api_key():
+    env_file = ROOT / ".env"  # A local key file wins over older keys saved in Windows. Git ignores it.
+    lines = env_file.read_text(encoding="utf-8-sig").splitlines() if env_file.exists() else []
+    key = next((line.split("=", 1)[1].strip().strip("\"'") for line in lines if line.startswith("ANTHROPIC_API_KEY=")), "") or os.environ.get("ANTHROPIC_API_KEY")
     if not key and os.name == "nt":
         import winreg
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
-            key = winreg.QueryValueEx(k, "AWS_BEARER_TOKEN_BEDROCK")[0]
+            key = winreg.QueryValueEx(k, "ANTHROPIC_API_KEY")[0]
     if not key:
-        raise RuntimeError("Bedrock key is not configured")
+        raise RuntimeError("Claude API key is not configured")
     return key.strip()
+
+
+def call_model(model, run):
+    """Makes one paid read through the Claude API. It never retries, so a bad key cannot run up a bill."""
+    client = anthropic.Anthropic(api_key=api_key(), max_retries=0, timeout=120)
+    try:
+        reply = client.messages.create(model=model, max_tokens=8000, system=PROMPT, output_config={"effort": "low"}, messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.standard_b64encode(run.image).decode()}},
+            {"type": "text", "text": "<page_text>\n" + run.text + "\n</page_text>"}]}])
+    except anthropic.APIStatusError as exc:
+        raise RuntimeError(f"The Claude API refused the request (HTTP {exc.status_code}).") from None
+    except anthropic.APIConnectionError:
+        raise RuntimeError("The Claude API could not be reached.") from None
+    if reply.stop_reason != "end_turn":  # A refusal or a cut-off reply is never trusted.
+        raise RuntimeError(f"The Claude API stopped early ({reply.stop_reason}).")
+    return "".join(block.text for block in reply.content if block.type == "text"), reply.usage.input_tokens, reply.usage.output_tokens
 
 
 def parse_reading(text):
@@ -167,41 +182,21 @@ def read_with(run, model, live, slot):
             raise RuntimeError("today's limit for reading new invoices is reached. The invoices already on the desk still work.")
         cache.execute("insert into calls(key, created_at) values (?, ?)", (key, datetime.now(timezone.utc).isoformat()))
         cache.commit()
-        token = bedrock_key()
-        body = {"system": [{"text": PROMPT}], "messages": [{"role": "user", "content": [
-            {"image": {"format": "jpeg", "source": {"bytes": base64.b64encode(run.image).decode()}}},
-            {"text": "<page_text>\n" + run.text + "\n</page_text>"}]}], "inferenceConfig": {"maxTokens": 4000, **({"temperature": 0} if "nova" in model else {})}}
-        url = f"https://bedrock-runtime.{REGION}.amazonaws.com/model/{urllib.parse.quote(model, safe='')}/converse"
-        request = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(request, timeout=120) as response:
-                result = json.load(response)
-        except urllib.error.HTTPError as exc:
-            code = re.search(r"[A-Z]+_[A-Z_]+", exc.read(300).decode("utf-8", "replace"))
-            raise RuntimeError(f"Bedrock denied the request (HTTP {exc.code}{', ' + code.group(0) if code else ''}).") from None
-        text = "".join(c.get("text", "") for c in result["output"]["message"]["content"])
+        text, input_tokens, output_tokens = call_model(model, run)
         reading = parse_reading(text)  # A bad reply raises here, so it is never saved as this invoice's reading.
-        usage = result.get("usage", {})
-        cache.execute("insert into readings values (?, ?, ?, ?, ?)", (key, text, usage.get("inputTokens"), usage.get("outputTokens"), datetime.now(timezone.utc).isoformat()))
+        cache.execute("insert into readings values (?, ?, ?, ?, ?)", (key, text, input_tokens, output_tokens, datetime.now(timezone.utc).isoformat()))
         cache.commit()
-        setattr(run, slot, {"source": "live call", "model": model, "paid_calls": 1, "input_tokens": usage.get("inputTokens"), "output_tokens": usage.get("outputTokens")})
+        setattr(run, slot, {"source": "live call", "model": model, "paid_calls": 1, "input_tokens": input_tokens, "output_tokens": output_tokens})
         return reading
 
 
-def bedrock_read(run, live=True):
-    """Uses the main reader. If Bedrock refuses it or has no saved reading, Nova gets one attempt."""
-    try:
-        return read_with(run, MODEL, live, "ai")
-    except (RuntimeError, OSError):
-        if MODEL == BACKUP_MODEL:
-            raise
-    raw = read_with(run, BACKUP_MODEL, live, "ai")
-    run.ai["backup"] = True
-    return raw
+def ai_read(run):
+    """Reads a new invoice once. If the API fails, the invoice is held rather than sent to another paid model."""
+    return read_with(run, MODEL, True, "ai")
 
 
 def saved_read(run):
-    return bedrock_read(run, live=False)
+    return read_with(run, SAVED_MODEL, False, "ai")
 
 
 def second_read(run):
@@ -209,7 +204,7 @@ def second_read(run):
 
 
 def saved_second_read(run):
-    return read_with(run, SECOND_MODEL, False, "second_ai")
+    return read_with(run, SAVED_SECOND_MODEL, False, "second_ai")
 
 
 class Run:
@@ -337,7 +332,7 @@ def understand(r):
         return r.add("RETURNED", "not_an_invoice", f"This is not a tax invoice ({kind}). Route it out.", stop=True)
     if r.reading["suspicious_instructions"] or INJECTION.search(r.text):
         return r.add("BLOCKED", "prompt_injection", "The document contains instructions aimed at the AI.", stop=True)
-    return f"Read {r.reading['invoice_number']} with {len(r.reading['line_items'])} line items ({r.ai['source']}{', Nova backup' if r.ai.get('backup') else ''})"
+    return f"Read {r.reading['invoice_number']} with {len(r.reading['line_items'])} line items ({r.ai['source']})"
 
 
 def confirm_scan(r):
@@ -789,9 +784,9 @@ def evidence(r, number):
     return marks
 
 
-def process(path, sender=None, db=None, reader=bedrock_read, master=None, on_stage=None, second_reader=None):
+def process(path, sender=None, db=None, reader=ai_read, master=None, on_stage=None, second_reader=None):
     r = Run(path, sender, db or connect(), reader, master)
-    r.second_reader = second_reader or {bedrock_read: second_read, saved_read: saved_second_read}.get(reader)
+    r.second_reader = second_reader or {ai_read: second_read, saved_read: saved_second_read}.get(reader)
 
     def publish(new=()):
         if on_stage:
@@ -859,7 +854,7 @@ def split_invoices(path, folder):
             return files
 
 
-def process_file(path, sender=None, db=None, reader=bedrock_read, master=None, on_stage=None, second_reader=None):
+def process_file(path, sender=None, db=None, reader=ai_read, master=None, on_stage=None, second_reader=None):
     """Clears a PDF, splitting it first when every page is its own invoice."""
     db = db or connect()
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:

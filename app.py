@@ -20,7 +20,7 @@ from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
-from pipeline import MAX_PAGE_SIDE, MODEL, PDF_LOCK, ROOT, STAGES, bedrock_read, connect, ink_free, process, record_receipts, saved_read, scenario_master, split_invoices, upright, words
+from pipeline import MAX_PAGE_SIDE, MODEL, PDF_LOCK, SAVED_MODEL, SECOND_MODEL, ROOT, STAGES, ai_read, connect, ink_free, process, record_receipts, saved_read, scenario_master, split_invoices, upright, words
 from tests.test_scenarios import SIMULATED_FAULTS, run_case
 
 # Test invoices use saved AI readings, so replaying them never spends an API call. Only a new upload can.
@@ -32,6 +32,7 @@ SCENARIOS = {s["id"]: s for s in json.loads((ROOT / "data" / "scenarios.json").r
 MASTER = json.loads((ROOT / "data" / "master.json").read_text(encoding="utf-8"))
 UPLOADS = {}
 OWNER_CODE = os.environ.get("DESK_PASSCODE", "")
+NAMES = {"claude-haiku-5-5": "Haiku 5.5", "claude-sonnet-5-5": "Sonnet 5.5", "claude-opus-5-5": "Opus 5.5"}
 app = FastAPI(title="Clearing Desk", docs_url=None, redoc_url=None)
 
 
@@ -101,7 +102,7 @@ def health():
 
 @app.get("/api/desk")
 def desk():
-    return {"as_of": MASTER["as_of"], "buyer": MASTER["buyer_entities"][MASTER["our_entity"]]["name"], "model": ("Opus 5.5" if "opus-5-5" in MODEL else MODEL) + ", Grok 4.6 for scans",
+    return {"as_of": MASTER["as_of"], "buyer": MASTER["buyer_entities"][MASTER["our_entity"]]["name"], "model": f"{NAMES.get(MODEL, MODEL)}, {NAMES.get(SECOND_MODEL, SECOND_MODEL)} for scans",
             "stages": [name for name, _ in STAGES], "tray": [tray_item(i) for i in READY], "owner_locked": bool(OWNER_CODE)}  # Uploads stay with the visitor who added them.
 
 
@@ -158,7 +159,7 @@ def add_upload(data, name, sender):
 def run(invoice_id: str, step: int = 0):
     uploaded = UPLOADS.get(invoice_id)
     if uploaded:
-        path, sender, reader, master, source, title = uploaded["path"], uploaded["sender"], bedrock_read, MASTER, "Upload", uploaded["title"]
+        path, sender, reader, master, source, title = uploaded["path"], uploaded["sender"], ai_read, MASTER, "Upload", uploaded["title"]
     else:
         case = ready_case(invoice_id)
         if not 0 <= step < len(case["steps"]):
@@ -232,7 +233,7 @@ def reset_ledger(request: Request):
 
 
 def real_run(scenario, case, report):
-    """The last real check for the current AI model, so changing the model resets this to Not run."""
+    """The last real check of the model behind the saved desk readings."""
     label = scenario["id"] + (f" ({case['name']})" if case["name"] else "")
     if any(step.get("fault") in SIMULATED_FAULTS for step in case["steps"]):
         return "Simulated"
@@ -241,7 +242,7 @@ def real_run(scenario, case, report):
 
 @app.get("/api/lab")
 def lab():
-    saved = ROOT / "output" / f"real_ai_{MODEL.replace(':', '_')}.json"
+    saved = ROOT / "output" / f"real_ai_{SAVED_MODEL.replace(':', '_')}.json"
     report = json.loads(saved.read_text(encoding="utf-8")) if saved.exists() else {}
 
     def stream():

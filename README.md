@@ -67,7 +67,7 @@ The full stage-by-stage logic, reason codes, and assumptions are in the [process
 
 The suite has **61 test cases**: 1 happy path, 21 business scenarios, and 39 technical failures. They cover fraud, duplicates, split invoices, tax errors, broken PDFs, AI failures, and two invoices hitting one PO at the same time.
 
-All 61 pass with known-correct readings. 58 were also checked with real Claude Opus 5.5 readings, and the other 3 simulate AI failures on purpose.
+All 61 pass with known-correct readings. 58 were also checked with real Claude Opus 5.5 readings, and the other 3 simulate AI failures on purpose. The 12 desk invoices replay those saved readings, so they cost nothing to run.
 
 <p>
   <img src="docs/images/ledger.png" alt="Ledger showing where the money went and a full audit trail" width="49%">
@@ -78,8 +78,8 @@ All 61 pass with known-correct readings. 58 were also checked with real Claude O
 
 | Area | Choice | Why |
 |---|---|---|
-| Reading | Claude Opus 5.5 on Amazon Bedrock, with Nova 2 Lite as backup | Opus read the checked fields correctly on a rotated scan that Nova misread |
-| Scan check | Grok 4.6 as an independent second reader | One AI dropped a digit from a clear bank account during testing and did not flag it |
+| Reading | Claude Haiku 5.5 through the Claude API | Low cost per invoice, and it read the clean and scanned test invoices correctly |
+| Scan check | Claude Sonnet 5.5 as a second reader for scans only | One AI dropped a digit from a clear bank account during testing and did not flag it |
 | Decisions | Plain Python rules | Repeatable and explainable |
 | App | FastAPI, SQLite, plain HTML, CSS, and JavaScript | Few moving parts during a live demo |
 | PDF | PyMuPDF | Handles text, word positions, and page images |
@@ -105,7 +105,7 @@ python tests/test_pipeline.py
 python tests/test_scenarios.py
 ```
 
-Saved AI readings are not stored in this repo, so the live demo is the easiest way to run the desk invoices. Locally, the Test lab works without a key. Reading a new upload needs `AWS_BEARER_TOKEN_BEDROCK`.
+Saved AI readings are not stored in this repo, so the live demo is the easiest way to run the desk invoices. Locally, the Test lab works without a key. Reading a new upload needs a Claude API key, set as `ANTHROPIC_API_KEY` in the environment or in a local `.env` file, which Git ignores.
 
 ## Project structure
 
